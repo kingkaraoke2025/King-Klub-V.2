@@ -1,0 +1,179 @@
+{
+  "project_name": "King Klub",
+  "design_philosophy": {
+    "identity": "The Royal Stage",
+    "vibe": "Premium, High-Energy, Competitive, Velvet-Rope Exclusivity",
+    "core_principle": "Every user is a performer. The UI is their stage.",
+    "emotional_archetype": "Jewel & Luxury (Archetype 5) mixed with Vibrant Play",
+    "theme_mode": "dark"
+  },
+  "design_system": {
+    "typography": {
+      "headings": {
+        "font_family": "Cinzel, serif",
+        "weights": ["700", "900"],
+        "usage": "Use for all Tier names (Peasant, King), Section Headers, and Impact Statements.",
+        "style_classes": "font-cinzel tracking-tight uppercase"
+      },
+      "body": {
+        "font_family": "Manrope, sans-serif",
+        "weights": ["400", "500", "600"],
+        "usage": "All UI text, queue lists, lyrics, and standard content.",
+        "style_classes": "font-manrope tracking-wide"
+      },
+      "accents": {
+        "font_family": "Playfair Display, serif",
+        "usage": "Italicized sub-headers or testimonials."
+      }
+    },
+    "colors": {
+      "palette": {
+        "background": {
+          "default": "#0F0518",
+          "paper": "#1A0B2E",
+          "surface": "#240F3E"
+        },
+        "primary": {
+          "gold_start": "#FFD700",
+          "gold_mid": "#FDB931",
+          "gold_end": "#D97706",
+          "description": "The Royal Gold. Use gradients, never flat colors for primary actions."
+        },
+        "secondary": {
+          "purple_deep": "#4C1D95",
+          "purple_vivid": "#7C3AED",
+          "neon_accent": "#D946EF"
+        },
+        "neutral": {
+          "white": "#FAFAF9",
+          "grey_100": "#F5F5F4",
+          "grey_400": "#A8A29E",
+          "grey_800": "#44403C"
+        },
+        "status": {
+          "success": "#10B981",
+          "error": "#EF4444",
+          "warning": "#F59E0B"
+        }
+      },
+      "gradients": {
+        "gold_rush": "bg-gradient-to-r from-[#FFD700] via-[#FDB931] to-[#D97706]",
+        "royal_velvet": "bg-gradient-to-b from-[#2e1065] to-[#0F0518]",
+        "glass_surface": "bg-white/5 backdrop-blur-xl border-white/10"
+      }
+    },
+    "spacing": {
+      "scale": "Generous. Use p-6, p-8, p-12. Avoid cramped p-2 or p-4 layouts.",
+      "grid_gap": "gap-6 or gap-8"
+    },
+    "borders": {
+      "radius": "rounded-xl",
+      "width": "border",
+      "color": "border-white/10",
+      "special": "border-gold/30"
+    },
+    "shadows": {
+      "glow": "shadow-[0_0_20px_rgba(124,58,237,0.3)]",
+      "gold_glow": "shadow-[0_0_15px_rgba(253,185,49,0.4)]"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": {
+        "classes": "bg-gradient-to-r from-[#FFD700] to-[#D97706] text-black font-bold uppercase tracking-wider hover:scale-105 transition-transform shadow-[0_0_15px_rgba(253,185,49,0.4)] rounded-full px-8 py-3",
+        "usage": "Main CTAs: 'Sing Now', 'Join Queue', 'Claim Reward'"
+      },
+      "secondary": {
+        "classes": "bg-white/5 border border-white/20 hover:bg-white/10 text-white backdrop-blur-md rounded-full px-6 py-2",
+        "usage": "Navigation, filters, cancel actions"
+      },
+      "ghost": {
+        "classes": "text-white/60 hover:text-[#FFD700] transition-colors",
+        "usage": "Footer links, tertiary actions"
+      }
+    },
+    "cards": {
+      "glass": {
+        "classes": "bg-[#1A0B2E]/60 backdrop-blur-xl border border-white/10 rounded-xl p-6 hover:border-[#FFD700]/30 transition-colors",
+        "usage": "Dashboard widgets, song queue items"
+      },
+      "solid": {
+        "classes": "bg-[#240F3E] border border-white/5 rounded-xl p-6",
+        "usage": "Static content areas"
+      }
+    },
+    "inputs": {
+      "classes": "bg-black/20 border-white/10 focus:border-[#FFD700] focus:ring-1 focus:ring-[#FFD700] text-white placeholder:text-white/30 rounded-lg h-12"
+    },
+    "badges": {
+      "rank_badge": "rounded-full bg-gradient-to-br from-purple-600 to-indigo-900 border border-white/20 px-3 py-1 text-xs font-bold uppercase tracking-widest text-white",
+      "gold_tier": "bg-gradient-to-r from-[#FFD700] to-[#D97706] text-black border-none"
+    }
+  },
+  "layout_strategies": {
+    "landing_page": {
+      "type": "The Tetris Grid (Mode A)",
+      "description": "Asymmetric layout. Hero section must be full screen with parallax. Feature blocks should alternate sizes.",
+      "hero_structure": "Full viewport height. Background image (curtains/stage) with heavy dark overlay (bg-black/80). Centered Gold Typography."
+    },
+    "dashboard": {
+      "type": "The Bento Grid (Mode B)",
+      "description": "Dense, data-rich but breathable. Current Rank is the 'Hero' cell (col-span-2). Queue is a tall list (row-span-2).",
+      "gap": "gap-6"
+    },
+    "queue_list": {
+      "style": "Table-less list. Each song is a 'row' card with glassmorphism. Current singer is highlighted in Gold."
+    }
+  },
+  "assets": {
+    "images": {
+      "hero_bg": {
+        "url": "https://images.unsplash.com/photo-1772537507935-065b8aba4df5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA3MDB8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBnb2xkJTIwY3Jvd24lMjB2ZWx2ZXQlMjByb3lhbCUyMGFlc3RoZXRpY3xlbnwwfHx8fDE3NzI5MjYyNTh8MA&ixlib=rb-4.1.0&q=85",
+        "alt": "Ornate Royal Curtains Background",
+        "usage": "Hero section background with opacity-30 overlay"
+      },
+      "singing_action": {
+        "url": "https://images.unsplash.com/photo-1766650577116-ab54eedec12a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzh8MHwxfHNlYXJjaHwyfHxoYXBweSUyMGZyaWVuZHMlMjBzaW5naW5nJTIwa2FyYW9rZSUyMHBhcnR5fGVufDB8fHx8MTc3MjkyNjI1OXww&ixlib=rb-4.1.0&q=85",
+        "alt": "People singing on stage",
+        "usage": "Features section, 'Join the Party' block"
+      },
+      "mic_closeup": {
+        "url": "https://images.unsplash.com/photo-1703353312021-a1965f5a7ddd?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwxfHxrYXJhb2tlJTIwbWljcm9waG9uZSUyMHN0YWdlJTIwbGlnaHRzJTIwZGFyayUyMGF0bW9zcGhlcmV8ZW58MHx8fHwxNzcyOTI2MjU3fDA&ixlib=rb-4.1.0&q=85",
+        "alt": "Microphone with stage light",
+        "usage": "Login/Signup side image, or 'Add to Queue' modal header"
+      }
+    },
+    "icons": {
+      "library": "lucide-react",
+      "style": "Thin strokes (1.5px), Gold or White color."
+    }
+  },
+  "motion_guidelines": {
+    "library": "framer-motion",
+    "defaults": {
+      "transition": { "duration": 0.4, "ease": [0.22, 1, 0.36, 1] },
+      "hover": { "scale": 1.02, "filter": "brightness(1.1)" }
+    },
+    "specifics": {
+      "page_load": "Fade in + Slide Up (y: 20 -> 0)",
+      "queue_item": "Layout animation (layout prop in framer-motion)",
+      "success_modal": "Confetti effect + Scale In"
+    }
+  },
+  "universal_guidelines": [
+    "Do NOT use gradients for dark backgrounds. Use solid deep colors (e.g., #0F0518) or subtle noise textures.",
+    "Do NOT use standard HTML inputs. Use the custom styled inputs defined in components.",
+    "Always use the 'Cinzel' font for the word 'King' or rank titles.",
+    "Ensure 3:1 contrast ratio for all text, even on glass backgrounds.",
+    "Use 'sonner' for all notifications (toasts).",
+    "Data-testid attributes are mandatory for all interactive elements.",
+    "Avoid 'Inter' font completely. Use Manrope for body."
+  ],
+  "implementation_steps": [
+    "1. Install dependencies: framer-motion, lucide-react, sonner, clsx, tailwind-merge, @fontsource/cinzel, @fontsource/manrope",
+    "2. Update tailwind.config.js with the custom color palette and font families.",
+    "3. Update index.css to set the root dark theme variables.",
+    "4. Create the 'Layout' component that handles the background gradient/texture.",
+    "5. Build the atomic components (Button, Card, Input) first."
+  ]
+}
