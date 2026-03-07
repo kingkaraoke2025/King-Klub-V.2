@@ -1,53 +1,113 @@
-import { useEffect } from "react";
+import "@fontsource/cinzel/400.css";
+import "@fontsource/cinzel/700.css";
+import "@fontsource/cinzel/900.css";
+import "@fontsource/manrope/400.css";
+import "@fontsource/manrope/500.css";
+import "@fontsource/manrope/600.css";
+import "@fontsource/manrope/700.css";
+import "@fontsource/playfair-display/400.css";
+import "@fontsource/playfair-display/500.css";
+import "@fontsource/playfair-display/600-italic.css";
+
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+// Pages
+import LandingPage from "@/pages/LandingPage";
+import LoginPage from "@/pages/LoginPage";
+import RegisterPage from "@/pages/RegisterPage";
+import DashboardPage from "@/pages/DashboardPage";
+import QueuePage from "@/pages/QueuePage";
+import LeaderboardPage from "@/pages/LeaderboardPage";
+import AccomplishmentsPage from "@/pages/AccomplishmentsPage";
+import AdminPage from "@/pages/AdminPage";
 
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
-
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
-  return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
+// Protected Route Component
+const ProtectedRoute = ({ children, adminOnly = false }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-royal-bg flex items-center justify-center">
+        <div className="text-gold animate-pulse font-cinzel text-2xl">Loading...</div>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (adminOnly && !user.is_admin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return children;
 };
 
 function App() {
   return (
-    <div className="App">
+    <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/queue"
+            element={
+              <ProtectedRoute>
+                <QueuePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/leaderboard"
+            element={
+              <ProtectedRoute>
+                <LeaderboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/accomplishments"
+            element={
+              <ProtectedRoute>
+                <AccomplishmentsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute adminOnly>
+                <AdminPage />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
+        <Toaster 
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: '#1A0B2E',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: '#FAFAF9',
+            },
+          }}
+        />
       </BrowserRouter>
-    </div>
+    </AuthProvider>
   );
 }
 

@@ -1,34 +1,131 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+/* King Klub - Royal Theme Styles */
+
+/* Rank badge colors */
+.rank-peasant {
+    @apply bg-gray-600/50 border-gray-500;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
+.rank-squire {
+    @apply bg-green-600/50 border-green-500;
+}
+
+.rank-knight {
+    @apply bg-blue-600/50 border-blue-500;
+}
+
+.rank-count {
+    @apply bg-purple-600/50 border-purple-500;
+}
+
+.rank-duke {
+    @apply bg-pink-600/50 border-pink-500;
+}
+
+.rank-prince {
+    @apply bg-gradient-to-r from-gold-start to-gold-end text-black border-gold;
+}
+
+/* Queue item animations */
+.queue-item {
+    @apply transition-all duration-300;
+}
+
+.queue-item:hover {
+    @apply border-gold/30;
+}
+
+.queue-item.current {
+    @apply border-gold/50 bg-gold/5;
+    animation: gold-glow 2s ease-in-out infinite;
+}
+
+@keyframes gold-glow {
+    0%, 100% {
+        box-shadow: 0 0 15px rgba(253, 185, 49, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 25px rgba(253, 185, 49, 0.4);
     }
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+/* Leaderboard row hover */
+.leaderboard-row {
+    @apply transition-all duration-200;
 }
 
-.App-link {
-    color: #61dafb;
+.leaderboard-row:hover {
+    @apply bg-white/5;
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+/* Badge animations */
+.badge-earned {
+    @apply animate-bounce;
+}
+
+/* Hero section styles */
+.hero-bg {
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-bg::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(15, 5, 24, 0.7) 0%, rgba(15, 5, 24, 0.95) 100%);
+    z-index: 1;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+}
+
+/* Form input focus */
+.royal-input {
+    @apply bg-black/20 border-white/10 focus:border-gold focus:ring-1 focus:ring-gold;
+    @apply text-white placeholder:text-white/30 rounded-lg h-12 px-4;
+    @apply transition-all duration-200;
+}
+
+/* Card hover effects */
+.royal-card {
+    @apply bg-royal-paper/60 backdrop-blur-xl border border-white/10 rounded-xl p-6;
+    @apply hover:border-gold/30 transition-all duration-300;
+}
+
+.royal-card:hover {
+    transform: translateY(-2px);
+}
+
+/* Progress bar styling */
+.progress-gold {
+    background: linear-gradient(90deg, #FFD700, #FDB931, #D97706);
+}
+
+/* Navigation active state */
+.nav-link.active {
+    @apply text-gold border-b-2 border-gold;
+}
+
+/* Modal overlay */
+.modal-overlay {
+    @apply fixed inset-0 bg-black/80 backdrop-blur-sm z-50;
+}
+
+/* Stat card */
+.stat-card {
+    @apply bg-royal-paper/60 backdrop-blur-xl border border-white/10 rounded-xl p-6 text-center;
+}
+
+.stat-value {
+    @apply text-3xl font-bold font-cinzel;
+    background: linear-gradient(135deg, #FFD700, #FDB931, #D97706);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.stat-label {
+    @apply text-sm text-white/60 mt-1 uppercase tracking-wider;
 }
