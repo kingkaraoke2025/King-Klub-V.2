@@ -4,6 +4,8 @@ import { Crown, Mic2, Trophy, Award, Settings, LogOut, Menu, X, Shield } from 'l
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const LOGO_URL = "https://customer-assets.emergentagent.com/job_karaoke-kingdom/artifacts/ttig1x57_King%20Karaoke%203.png";
+
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: Crown },
   { path: '/queue', label: 'Song Queue', icon: Mic2 },
@@ -36,8 +38,8 @@ export const Layout = ({ children }) => {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/dashboard" className="flex items-center gap-2" data-testid="logo-link">
-              <Crown className="w-8 h-8 text-gold" />
-              <span className="font-cinzel font-bold text-xl text-gold-gradient">
+              <img src={LOGO_URL} alt="King Karaoke" className="w-10 h-10 object-contain" />
+              <span className="font-cinzel font-bold text-xl text-gold-gradient hidden sm:block">
                 King Klub
               </span>
             </Link>

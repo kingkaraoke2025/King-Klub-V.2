@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Crown, Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
+
+const LOGO_URL = "https://customer-assets.emergentagent.com/job_karaoke-kingdom/artifacts/ttig1x57_King%20Karaoke%203.png";
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -60,8 +62,8 @@ const LoginPage = () => {
           className="w-full max-w-md"
         >
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 mb-8" data-testid="logo-link">
-            <Crown className="w-8 h-8 text-gold" />
+          <Link to="/" className="flex items-center gap-3 mb-8" data-testid="logo-link">
+            <img src={LOGO_URL} alt="King Karaoke" className="w-16 h-16 object-contain" />
             <span className="font-cinzel font-bold text-2xl text-gold-gradient">King Klub</span>
           </Link>
 

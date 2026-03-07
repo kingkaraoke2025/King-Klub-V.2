@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Crown, Mic2, Trophy, Users, Star, ArrowRight, Sparkles } from 'lucide-react';
+import { Mic2, Trophy, Users, Star, ArrowRight, Sparkles, Crown } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+
+const LOGO_URL = "https://customer-assets.emergentagent.com/job_karaoke-kingdom/artifacts/ttig1x57_King%20Karaoke%203.png";
 
 const features = [
   {
@@ -61,15 +63,19 @@ const LandingPage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           >
-            {/* Crown Icon */}
+            {/* Logo */}
             <div className="flex justify-center mb-6">
-              <div className="p-4 bg-gold/10 rounded-full border border-gold/30 animate-gold-glow">
-                <Crown className="w-12 h-12 text-gold" />
-              </div>
+              <motion.img 
+                src={LOGO_URL} 
+                alt="King Karaoke" 
+                className="w-48 h-48 sm:w-64 sm:h-64 object-contain drop-shadow-2xl"
+                animate={{ y: [0, -10, 0] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              />
             </div>
 
             {/* Main Title */}
-            <h1 className="font-cinzel font-black text-5xl sm:text-6xl lg:text-7xl tracking-tight mb-6">
+            <h1 className="font-cinzel font-black text-4xl sm:text-5xl lg:text-6xl tracking-tight mb-6">
               <span className="text-white">Welcome to the</span>
               <br />
               <span className="text-gold-gradient">King Klub</span>
@@ -245,8 +251,8 @@ const LandingPage = () => {
       {/* Footer */}
       <footer className="py-8 px-4 border-t border-white/10">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Crown className="w-5 h-5 text-gold" />
+          <div className="flex items-center gap-3">
+            <img src={LOGO_URL} alt="King Karaoke" className="w-10 h-10 object-contain" />
             <span className="font-cinzel font-bold text-white">King Klub</span>
           </div>
           <p className="text-white/40 text-sm">
