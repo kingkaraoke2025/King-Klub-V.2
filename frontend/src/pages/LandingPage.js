@@ -255,9 +255,18 @@ const LandingPage = () => {
             <img src={LOGO_URL} alt="King Karaoke" className="w-10 h-10 object-contain" />
             <span className="font-cinzel font-bold text-white">King Klub</span>
           </div>
-          <p className="text-white/40 text-sm">
-            © 2024 King Karaoke. All rights reserved.
-          </p>
+          <div className="flex items-center gap-6">
+            <Link 
+              to="/admin/login" 
+              className="text-white/40 hover:text-white/60 text-sm transition-colors"
+              data-testid="staff-login-link"
+            >
+              Staff Login
+            </Link>
+            <p className="text-white/40 text-sm">
+              © 2024 King Karaoke. All rights reserved.
+            </p>
+          </div>
         </div>
       </footer>
     </div>

@@ -23,6 +23,7 @@ import QueuePage from "@/pages/QueuePage";
 import LeaderboardPage from "@/pages/LeaderboardPage";
 import AccomplishmentsPage from "@/pages/AccomplishmentsPage";
 import AdminPage from "@/pages/AdminPage";
+import AdminLoginPage from "@/pages/AdminLoginPage";
 import CheckInPage from "@/pages/CheckInPage";
 import QRCheckInPage from "@/pages/QRCheckInPage";
 
@@ -57,6 +58,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route
             path="/dashboard"
             element={
