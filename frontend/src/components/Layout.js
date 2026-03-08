@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { Crown, Mic2, Trophy, Award, Settings, LogOut, Menu, X, Shield } from 'lucide-react';
+import { Crown, Mic2, Trophy, Award, Settings, LogOut, Menu, X, Shield, QrCode } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -15,6 +15,7 @@ const navItems = [
 
 const adminNavItems = [
   { path: '/admin', label: 'Admin', icon: Shield },
+  { path: '/admin/qr-checkin', label: 'QR Check-In', icon: QrCode },
 ];
 
 export const Layout = ({ children }) => {

@@ -23,6 +23,8 @@ import QueuePage from "@/pages/QueuePage";
 import LeaderboardPage from "@/pages/LeaderboardPage";
 import AccomplishmentsPage from "@/pages/AccomplishmentsPage";
 import AdminPage from "@/pages/AdminPage";
+import CheckInPage from "@/pages/CheckInPage";
+import QRCheckInPage from "@/pages/QRCheckInPage";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, adminOnly = false }) => {
@@ -95,6 +97,15 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/admin/qr-checkin"
+            element={
+              <ProtectedRoute adminOnly>
+                <QRCheckInPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/checkin/:venueCode" element={<CheckInPage />} />
         </Routes>
         <Toaster 
           position="top-right"

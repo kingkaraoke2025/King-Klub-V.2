@@ -786,6 +786,151 @@ async def get_user_point_history(user_id: str, admin: dict = Depends(get_admin_u
 async def get_ranks():
     return RANKS
 
+# ==================== QR CODE CHECK-IN ====================
+import hashlib
+VENUE_SECRET = os.environ.get('VENUE_SECRET', 'king-karaoke-2024')
+CHECKIN_POINTS = 50
+
+@api_router.get("/venue/qr-data")
+async def get_venue_qr_data(admin: dict = Depends(get_admin_user)):
+    """Get QR code data for venue check-in (admin only)"""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    daily_code = hashlib.sha256(f"{VENUE_SECRET}-{today}".encode()).hexdigest()[:12]
+    
+    return {
+        "venue_code": daily_code,
+        "date": today,
+        "checkin_url": f"/checkin/{daily_code}"
+    }
+
+@api_router.post("/checkin/{venue_code}")
+async def perform_checkin(venue_code: str, user: dict = Depends(get_current_user)):
+    """Perform a venue check-in via QR code"""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    expected_code = hashlib.sha256(f"{VENUE_SECRET}-{today}".encode()).hexdigest()[:12]
+    
+    if venue_code != expected_code:
+        raise HTTPException(status_code=400, detail="Invalid or expired QR code")
+    
+    existing_checkin = await db.checkins.find_one({
+        "user_id": user["id"],
+        "date": today
+    })
+    
+    if existing_checkin:
+        return {
+            "success": False,
+            "message": "You've already checked in today!",
+            "already_checked_in": True,
+            "points_awarded": 0
+        }
+    
+    checkin = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "date": today,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "venue_code": venue_code
+    }
+    await db.checkins.insert_one(checkin)
+    
+    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+    yesterday_checkin = await db.checkins.find_one({
+        "user_id": user["id"],
+        "date": yesterday
+    })
+    
+    current_consecutive = user.get("consecutive_visits", 0)
+    if yesterday_checkin:
+        new_consecutive = current_consecutive + 1
+    else:
+        new_consecutive = 1
+    
+    await db.users.update_one(
+        {"id": user["id"]},
+        {
+            "$inc": {"points": CHECKIN_POINTS, "total_checkins": 1},
+            "$set": {"consecutive_visits": new_consecutive, "last_checkin": today}
+        }
+    )
+    
+    badges_earned = []
+    bonus_points = 0
+    user_badges = list(user.get("badges", []))
+    
+    if new_consecutive >= 3 and "night_owl" not in user_badges:
+        user_badges.append("night_owl")
+        badges_earned.append("night_owl")
+        bonus_points += BADGES["night_owl"]["points_reward"]
+    
+    if new_consecutive >= 5 and "dedicated_fan" not in user_badges:
+        user_badges.append("dedicated_fan")
+        badges_earned.append("dedicated_fan")
+        bonus_points += BADGES["dedicated_fan"]["points_reward"]
+    
+    if new_consecutive >= 10 and "loyal_patron" not in user_badges:
+        user_badges.append("loyal_patron")
+        badges_earned.append("loyal_patron")
+        bonus_points += BADGES["loyal_patron"]["points_reward"]
+    
+    if badges_earned:
+        await db.users.update_one(
+            {"id": user["id"]},
+            {"$set": {"badges": user_badges}, "$inc": {"points": bonus_points}}
+        )
+        for badge_id in badges_earned:
+            await db.accomplishments.insert_one({
+                "id": str(uuid.uuid4()),
+                "user_id": user["id"],
+                "badge_id": badge_id,
+                "badge_name": BADGES[badge_id]["name"],
+                "earned_at": datetime.now(timezone.utc).isoformat()
+            })
+    
+    return {
+        "success": True,
+        "message": f"Welcome to King Karaoke! +{CHECKIN_POINTS} points",
+        "points_awarded": CHECKIN_POINTS,
+        "bonus_points": bonus_points,
+        "consecutive_visits": new_consecutive,
+        "badges_earned": [BADGES[b]["name"] for b in badges_earned],
+        "already_checked_in": False
+    }
+
+@api_router.get("/checkin/status/today")
+async def get_today_checkin_status(user: dict = Depends(get_current_user)):
+    """Check if user has checked in today"""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    existing = await db.checkins.find_one({
+        "user_id": user["id"],
+        "date": today
+    })
+    
+    return {
+        "checked_in_today": existing is not None,
+        "consecutive_visits": user.get("consecutive_visits", 0),
+        "total_checkins": user.get("total_checkins", 0)
+    }
+
+@api_router.get("/admin/checkins/today")
+async def get_today_checkins(admin: dict = Depends(get_admin_user)):
+    """Get all check-ins for today (admin only)"""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    checkins = await db.checkins.find(
+        {"date": today},
+        {"_id": 0}
+    ).to_list(500)
+    
+    for checkin in checkins:
+        u = await db.users.find_one({"id": checkin["user_id"]}, {"_id": 0, "display_name": 1})
+        checkin["user_name"] = u["display_name"] if u else "Unknown"
+    
+    return {
+        "date": today,
+        "total_checkins": len(checkins),
+        "checkins": checkins
+    }
+
 # ==================== ROOT ====================
 @api_router.get("/")
 async def root():
