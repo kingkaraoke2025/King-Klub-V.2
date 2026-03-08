@@ -120,16 +120,50 @@ class Accomplishment(BaseModel):
     earned_at: str
 
 # ==================== BADGE DEFINITIONS ====================
+# Point actions that can be awarded
+POINT_ACTIONS = {
+    "sing_song": {"name": "Sing a Song", "points": 10, "description": "Perform a song on stage"},
+    "bring_friend": {"name": "Bring a Friend", "points": 10, "description": "Invite a new member"},
+    "sing_blindfolded": {"name": "Blindfolded Performance", "points": 250, "description": "Sing a song blindfolded"},
+    "three_nights": {"name": "3 Consecutive Nights", "points": 25, "description": "Visit 3 nights in a row"},
+    "five_nights": {"name": "5 Consecutive Nights", "points": 50, "description": "Visit 5 nights in a row"},
+    "random_song": {"name": "Random Song Challenge", "points": 200, "description": "Sing a randomly selected song"},
+    "sing_duet": {"name": "Duet Performance", "points": 10, "description": "Perform a duet with someone"},
+    "tiktok_post": {"name": "TikTok Post", "points": 200, "description": "Post performance to TikTok"},
+    "follow_tiktok": {"name": "Follow on TikTok", "points": 10, "description": "Follow King Karaoke on TikTok"},
+    "follow_facebook": {"name": "Follow on Facebook", "points": 10, "description": "Follow King Karaoke on Facebook"},
+    "tip_kj": {"name": "Tip the KJ", "points": 10, "description": "Show appreciation to the KJ"},
+    "bar_song": {"name": "King Karaoke Bar Song", "points": 100, "description": "Perform the official bar song"},
+}
+
+# Achievement badges (earned automatically based on milestones)
 BADGES = {
-    "first_song": {"name": "First Timer", "description": "Performed your first song", "icon": "mic", "points_reward": 25},
-    "five_songs": {"name": "Rising Star", "description": "Performed 5 songs", "icon": "star", "points_reward": 50},
-    "ten_songs": {"name": "Stage Regular", "description": "Performed 10 songs", "icon": "trophy", "points_reward": 100},
-    "twenty_songs": {"name": "Karaoke King", "description": "Performed 20 songs", "icon": "crown", "points_reward": 200},
-    "rock_star": {"name": "Rock Star", "description": "Performed 3 rock songs", "icon": "guitar", "points_reward": 50},
-    "pop_icon": {"name": "Pop Icon", "description": "Performed 3 pop songs", "icon": "music", "points_reward": 50},
-    "duet_master": {"name": "Duet Master", "description": "Performed 3 duets", "icon": "users", "points_reward": 75},
-    "night_owl": {"name": "Night Owl", "description": "Visited 5 consecutive times", "icon": "moon", "points_reward": 100},
-    "loyal_patron": {"name": "Loyal Patron", "description": "Visited 10 consecutive times", "icon": "heart", "points_reward": 150},
+    # Performance milestones
+    "first_song": {"name": "First Timer", "description": "Performed your first song", "icon": "mic", "points_reward": 10, "category": "performance"},
+    "five_songs": {"name": "Rising Star", "description": "Performed 5 songs", "icon": "star", "points_reward": 25, "category": "performance"},
+    "ten_songs": {"name": "Stage Regular", "description": "Performed 10 songs", "icon": "trophy", "points_reward": 50, "category": "performance"},
+    "twenty_songs": {"name": "Karaoke Royalty", "description": "Performed 20 songs", "icon": "crown", "points_reward": 100, "category": "performance"},
+    
+    # Special challenges
+    "blindfolded_master": {"name": "Blindfolded Master", "description": "Completed a blindfolded performance", "icon": "eye-off", "points_reward": 250, "category": "challenge"},
+    "random_warrior": {"name": "Random Warrior", "description": "Conquered the random song challenge", "icon": "shuffle", "points_reward": 200, "category": "challenge"},
+    "bar_song_hero": {"name": "Bar Song Hero", "description": "Performed the King Karaoke bar song", "icon": "music", "points_reward": 100, "category": "challenge"},
+    
+    # Social badges
+    "duet_singer": {"name": "Duet Partner", "description": "Performed your first duet", "icon": "users", "points_reward": 10, "category": "social"},
+    "duet_master": {"name": "Duet Master", "description": "Performed 5 duets", "icon": "heart-handshake", "points_reward": 50, "category": "social"},
+    "social_butterfly": {"name": "Social Butterfly", "description": "Brought 3 friends to King Karaoke", "icon": "user-plus", "points_reward": 50, "category": "social"},
+    "influencer": {"name": "Influencer", "description": "Posted to TikTok", "icon": "video", "points_reward": 200, "category": "social"},
+    "super_fan": {"name": "Super Fan", "description": "Followed on TikTok & Facebook", "icon": "thumbs-up", "points_reward": 20, "category": "social"},
+    
+    # Loyalty badges
+    "night_owl": {"name": "Night Owl", "description": "Visited 3 consecutive nights", "icon": "moon", "points_reward": 25, "category": "loyalty"},
+    "dedicated_fan": {"name": "Dedicated Fan", "description": "Visited 5 consecutive nights", "icon": "flame", "points_reward": 50, "category": "loyalty"},
+    "loyal_patron": {"name": "Loyal Patron", "description": "Visited 10 consecutive nights", "icon": "award", "points_reward": 100, "category": "loyalty"},
+    
+    # Generosity
+    "generous_tipper": {"name": "Generous Tipper", "description": "Tipped the KJ", "icon": "coins", "points_reward": 10, "category": "generosity"},
+    "big_tipper": {"name": "Big Tipper", "description": "Tipped the KJ 5 times", "icon": "banknote", "points_reward": 50, "category": "generosity"},
 }
 
 # ==================== AUTH HELPERS ====================
@@ -513,6 +547,239 @@ async def get_stats():
         "total_songs_performed": total_songs,
         "current_queue_length": queue_length
     }
+
+# ==================== POINT ACTIONS ====================
+@api_router.get("/point-actions")
+async def get_point_actions():
+    """Get all available point-earning actions"""
+    return [{"id": k, **v} for k, v in POINT_ACTIONS.items()]
+
+class AwardPointsRequest(BaseModel):
+    user_id: str
+    action_id: str
+    notes: Optional[str] = None
+
+async def check_and_award_badges(user_id: str, user_data: dict):
+    """Check if user qualifies for any new badges and award them"""
+    badges = list(user_data.get("badges", []))
+    new_badges = []
+    bonus_points = 0
+    
+    # Get user stats
+    stats = user_data.get("action_stats", {})
+    songs = user_data.get("songs_performed", 0)
+    duets = stats.get("duets", 0)
+    friends_brought = stats.get("friends_brought", 0)
+    tips = stats.get("tips", 0)
+    consecutive = user_data.get("consecutive_visits", 0)
+    
+    # Performance badges
+    if songs >= 1 and "first_song" not in badges:
+        badges.append("first_song")
+        new_badges.append("first_song")
+        bonus_points += BADGES["first_song"]["points_reward"]
+    
+    if songs >= 5 and "five_songs" not in badges:
+        badges.append("five_songs")
+        new_badges.append("five_songs")
+        bonus_points += BADGES["five_songs"]["points_reward"]
+    
+    if songs >= 10 and "ten_songs" not in badges:
+        badges.append("ten_songs")
+        new_badges.append("ten_songs")
+        bonus_points += BADGES["ten_songs"]["points_reward"]
+    
+    if songs >= 20 and "twenty_songs" not in badges:
+        badges.append("twenty_songs")
+        new_badges.append("twenty_songs")
+        bonus_points += BADGES["twenty_songs"]["points_reward"]
+    
+    # Duet badges
+    if duets >= 1 and "duet_singer" not in badges:
+        badges.append("duet_singer")
+        new_badges.append("duet_singer")
+        bonus_points += BADGES["duet_singer"]["points_reward"]
+    
+    if duets >= 5 and "duet_master" not in badges:
+        badges.append("duet_master")
+        new_badges.append("duet_master")
+        bonus_points += BADGES["duet_master"]["points_reward"]
+    
+    # Social badges
+    if friends_brought >= 3 and "social_butterfly" not in badges:
+        badges.append("social_butterfly")
+        new_badges.append("social_butterfly")
+        bonus_points += BADGES["social_butterfly"]["points_reward"]
+    
+    # Loyalty badges
+    if consecutive >= 3 and "night_owl" not in badges:
+        badges.append("night_owl")
+        new_badges.append("night_owl")
+        bonus_points += BADGES["night_owl"]["points_reward"]
+    
+    if consecutive >= 5 and "dedicated_fan" not in badges:
+        badges.append("dedicated_fan")
+        new_badges.append("dedicated_fan")
+        bonus_points += BADGES["dedicated_fan"]["points_reward"]
+    
+    if consecutive >= 10 and "loyal_patron" not in badges:
+        badges.append("loyal_patron")
+        new_badges.append("loyal_patron")
+        bonus_points += BADGES["loyal_patron"]["points_reward"]
+    
+    # Tipper badges
+    if tips >= 1 and "generous_tipper" not in badges:
+        badges.append("generous_tipper")
+        new_badges.append("generous_tipper")
+        bonus_points += BADGES["generous_tipper"]["points_reward"]
+    
+    if tips >= 5 and "big_tipper" not in badges:
+        badges.append("big_tipper")
+        new_badges.append("big_tipper")
+        bonus_points += BADGES["big_tipper"]["points_reward"]
+    
+    # Update user badges and add bonus points
+    if new_badges:
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": {"badges": badges}, "$inc": {"points": bonus_points}}
+        )
+        
+        # Record accomplishments
+        for badge_id in new_badges:
+            await db.accomplishments.insert_one({
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "badge_id": badge_id,
+                "badge_name": BADGES[badge_id]["name"],
+                "earned_at": datetime.now(timezone.utc).isoformat()
+            })
+    
+    return new_badges, bonus_points
+
+@api_router.post("/admin/award-points")
+async def award_points_action(data: AwardPointsRequest, admin: dict = Depends(get_admin_user)):
+    """Award points for a specific action (admin only)"""
+    if data.action_id not in POINT_ACTIONS:
+        raise HTTPException(status_code=400, detail="Invalid action ID")
+    
+    action = POINT_ACTIONS[data.action_id]
+    points = action["points"]
+    
+    # Get user
+    user = await db.users.find_one({"id": data.user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Prepare update
+    update_ops = {"$inc": {"points": points}}
+    
+    # Track specific stats based on action
+    if data.action_id == "sing_song":
+        update_ops["$inc"]["songs_performed"] = 1
+    elif data.action_id == "sing_duet":
+        update_ops["$inc"]["songs_performed"] = 1
+        update_ops["$inc"]["action_stats.duets"] = 1
+    elif data.action_id == "bring_friend":
+        update_ops["$inc"]["action_stats.friends_brought"] = 1
+    elif data.action_id == "tip_kj":
+        update_ops["$inc"]["action_stats.tips"] = 1
+    elif data.action_id in ["three_nights", "five_nights"]:
+        update_ops["$set"] = {"consecutive_visits": 3 if data.action_id == "three_nights" else 5}
+    elif data.action_id == "follow_tiktok":
+        update_ops["$set"] = update_ops.get("$set", {})
+        update_ops["$set"]["action_stats.followed_tiktok"] = True
+    elif data.action_id == "follow_facebook":
+        update_ops["$set"] = update_ops.get("$set", {})
+        update_ops["$set"]["action_stats.followed_facebook"] = True
+    
+    # Apply update
+    await db.users.update_one({"id": data.user_id}, update_ops)
+    
+    # Check for special action badges
+    badges_awarded = []
+    bonus_points = 0
+    
+    user_updated = await db.users.find_one({"id": data.user_id}, {"_id": 0})
+    badges = list(user_updated.get("badges", []))
+    
+    # Special challenge badges (awarded immediately)
+    if data.action_id == "sing_blindfolded" and "blindfolded_master" not in badges:
+        badges.append("blindfolded_master")
+        badges_awarded.append("blindfolded_master")
+        bonus_points += BADGES["blindfolded_master"]["points_reward"]
+    
+    if data.action_id == "random_song" and "random_warrior" not in badges:
+        badges.append("random_warrior")
+        badges_awarded.append("random_warrior")
+        bonus_points += BADGES["random_warrior"]["points_reward"]
+    
+    if data.action_id == "bar_song" and "bar_song_hero" not in badges:
+        badges.append("bar_song_hero")
+        badges_awarded.append("bar_song_hero")
+        bonus_points += BADGES["bar_song_hero"]["points_reward"]
+    
+    if data.action_id == "tiktok_post" and "influencer" not in badges:
+        badges.append("influencer")
+        badges_awarded.append("influencer")
+        bonus_points += BADGES["influencer"]["points_reward"]
+    
+    # Check for super fan badge (followed both)
+    stats = user_updated.get("action_stats", {})
+    if stats.get("followed_tiktok") and stats.get("followed_facebook") and "super_fan" not in badges:
+        badges.append("super_fan")
+        badges_awarded.append("super_fan")
+        bonus_points += BADGES["super_fan"]["points_reward"]
+    
+    # Update badges if any awarded
+    if badges_awarded:
+        await db.users.update_one(
+            {"id": data.user_id},
+            {"$set": {"badges": badges}, "$inc": {"points": bonus_points}}
+        )
+        for badge_id in badges_awarded:
+            await db.accomplishments.insert_one({
+                "id": str(uuid.uuid4()),
+                "user_id": data.user_id,
+                "badge_id": badge_id,
+                "badge_name": BADGES[badge_id]["name"],
+                "earned_at": datetime.now(timezone.utc).isoformat()
+            })
+    
+    # Check milestone badges
+    user_final = await db.users.find_one({"id": data.user_id}, {"_id": 0})
+    milestone_badges, milestone_bonus = await check_and_award_badges(data.user_id, user_final)
+    badges_awarded.extend(milestone_badges)
+    bonus_points += milestone_bonus
+    
+    # Record action in history
+    await db.point_history.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": data.user_id,
+        "action_id": data.action_id,
+        "action_name": action["name"],
+        "points": points,
+        "notes": data.notes,
+        "awarded_by": admin["id"],
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {
+        "message": f"Awarded {points} points for {action['name']}",
+        "points_awarded": points,
+        "bonus_points": bonus_points,
+        "total_points": points + bonus_points,
+        "badges_earned": badges_awarded
+    }
+
+@api_router.get("/admin/point-history/{user_id}")
+async def get_user_point_history(user_id: str, admin: dict = Depends(get_admin_user)):
+    """Get point history for a user"""
+    history = await db.point_history.find(
+        {"user_id": user_id},
+        {"_id": 0}
+    ).sort("timestamp", -1).to_list(100)
+    return history
 
 # ==================== RANKS INFO ====================
 @api_router.get("/ranks")

@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Shield, Users, Mic2, CheckCircle, XCircle, Play, 
-  Plus, Minus, Crown, RefreshCw, UserCheck 
+  Plus, Minus, Crown, RefreshCw, UserCheck, Star, Gift, Search
 } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import axios from 'axios';
 
@@ -19,19 +20,25 @@ const AdminPage = () => {
   const [queue, setQueue] = useState([]);
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState(null);
+  const [pointActions, setPointActions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [awardDialogOpen, setAwardDialogOpen] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
 
   const fetchData = async () => {
     try {
-      const [queueRes, usersRes, statsRes] = await Promise.all([
+      const [queueRes, usersRes, statsRes, actionsRes] = await Promise.all([
         axios.get(`${API}/queue`),
         axios.get(`${API}/admin/users`),
-        axios.get(`${API}/stats`)
+        axios.get(`${API}/stats`),
+        axios.get(`${API}/point-actions`)
       ]);
       setQueue(queueRes.data);
       setUsers(usersRes.data);
       setStats(statsRes.data);
+      setPointActions(actionsRes.data);
     } catch (error) {
       console.error('Failed to fetch admin data:', error);
       toast.error('Failed to load admin data');
@@ -102,8 +109,41 @@ const AdminPage = () => {
     }
   };
 
+  const handleAwardAction = async (actionId) => {
+    if (!selectedUser) return;
+    
+    try {
+      const response = await axios.post(`${API}/admin/award-points`, {
+        user_id: selectedUser.id,
+        action_id: actionId
+      });
+      
+      const data = response.data;
+      let message = `Awarded ${data.points_awarded} points to ${selectedUser.display_name}`;
+      if (data.badges_earned?.length > 0) {
+        message += ` + ${data.badges_earned.length} badge(s)!`;
+      }
+      toast.success(message);
+      setAwardDialogOpen(false);
+      setSelectedUser(null);
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to award points');
+    }
+  };
+
+  const openAwardDialog = (u) => {
+    setSelectedUser(u);
+    setAwardDialogOpen(true);
+  };
+
   const currentSong = queue.find(item => item.status === 'current');
   const pendingQueue = queue.filter(item => item.status === 'pending');
+  
+  const filteredUsers = users.filter(u => 
+    u.display_name.toLowerCase().includes(userSearch.toLowerCase()) ||
+    u.email.toLowerCase().includes(userSearch.toLowerCase())
+  );
 
   if (loading) {
     return (
@@ -131,7 +171,7 @@ const AdminPage = () => {
                 Admin <span className="text-gold">Panel</span>
               </h1>
             </div>
-            <p className="text-white/60">Manage queue, users, and rewards</p>
+            <p className="text-white/60">Manage queue, users, and award points</p>
           </div>
           <Button
             onClick={handleRefresh}
@@ -188,6 +228,14 @@ const AdminPage = () => {
             >
               <Users className="w-4 h-4 mr-2" />
               Users
+            </TabsTrigger>
+            <TabsTrigger 
+              value="award"
+              data-testid="award-tab"
+              className="data-[state=active]:bg-gold/20 data-[state=active]:text-gold"
+            >
+              <Gift className="w-4 h-4 mr-2" />
+              Award Points
             </TabsTrigger>
           </TabsList>
 
@@ -354,8 +402,110 @@ const AdminPage = () => {
               </div>
             </div>
           </TabsContent>
+
+          {/* Award Points Tab */}
+          <TabsContent value="award" className="mt-6 space-y-6">
+            {/* User Search */}
+            <div className="glass-card p-4">
+              <label className="block text-sm font-medium text-white/80 mb-2">Search User to Award Points</label>
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+                <input
+                  type="text"
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  placeholder="Search by name or email..."
+                  data-testid="user-search-input"
+                  className="w-full royal-input pl-12"
+                />
+              </div>
+            </div>
+
+            {/* User List for Award */}
+            <div className="glass-card overflow-hidden">
+              <div className="p-4 border-b border-white/10 bg-gold/5">
+                <h2 className="font-cinzel font-bold text-lg text-gold">Select User to Award Points</h2>
+              </div>
+              <div className="divide-y divide-white/5 max-h-[400px] overflow-y-auto">
+                {filteredUsers.map((u, index) => (
+                  <motion.div
+                    key={u.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: index * 0.02 }}
+                    className="flex items-center justify-between p-4 hover:bg-white/5 cursor-pointer transition-colors"
+                    onClick={() => openAwardDialog(u)}
+                    data-testid={`award-user-${u.id}`}
+                  >
+                    <div>
+                      <h3 className="font-medium text-white">{u.display_name}</h3>
+                      <p className="text-white/40 text-sm">{u.points} points · {u.rank?.name}</p>
+                    </div>
+                    <Button size="sm" className="btn-gold">
+                      <Gift className="w-4 h-4 mr-2" />
+                      Award
+                    </Button>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+
+            {/* Point Actions Reference */}
+            <div className="glass-card overflow-hidden">
+              <div className="p-4 border-b border-white/10">
+                <h2 className="font-cinzel font-bold text-lg text-white">Point Actions Reference</h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-white/5">
+                {pointActions.map((action) => (
+                  <div key={action.id} className="p-4 bg-royal-paper">
+                    <div className="flex items-center justify-between">
+                      <span className="text-white">{action.name}</span>
+                      <span className={`font-bold ${
+                        action.points >= 100 ? 'text-gold' : 
+                        action.points >= 50 ? 'text-purple-400' : 'text-white/80'
+                      }`}>
+                        +{action.points}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
+
+      {/* Award Points Dialog */}
+      <Dialog open={awardDialogOpen} onOpenChange={setAwardDialogOpen}>
+        <DialogContent className="bg-royal-paper border-white/10 text-white max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-cinzel text-2xl text-gold">
+              Award Points to {selectedUser?.display_name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 mt-4">
+            {pointActions.map((action) => (
+              <button
+                key={action.id}
+                onClick={() => handleAwardAction(action.id)}
+                data-testid={`award-action-${action.id}`}
+                className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-gold/10 rounded-lg transition-colors text-left"
+              >
+                <div>
+                  <p className="text-white font-medium">{action.name}</p>
+                  <p className="text-white/50 text-sm">{action.description}</p>
+                </div>
+                <span className={`font-cinzel font-bold text-lg ${
+                  action.points >= 100 ? 'text-gold' : 
+                  action.points >= 50 ? 'text-purple-400' : 'text-white'
+                }`}>
+                  +{action.points}
+                </span>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };
