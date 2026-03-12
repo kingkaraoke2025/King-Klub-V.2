@@ -32,7 +32,7 @@ A full-stack web app for King Karaoke featuring:
 | Badges/Accomplishments | ✅ Complete | P1 |
 | Admin Panel | ✅ Complete | P1 |
 
-## What's Been Implemented (March 2026)
+## What's Been Implemented (December 2025)
 
 ### Backend (FastAPI + MongoDB)
 - User authentication (register, login, JWT tokens)
@@ -41,15 +41,22 @@ A full-stack web app for King Karaoke featuring:
 - Points & badges system with automatic badge unlocking
 - Leaderboard API
 - Admin endpoints (queue management, user management, points adjustment)
+- **QR Code Check-in System** - Daily venue check-ins with rotating QR codes
+- **Battle/Challenge System** - 5 challenge types (Royal Duel, Blind Challenge, Rank Battle, Song Roulette, Harmony Duel)
+- **Real-time WebSocket Voting** - Broadcast voting events to all connected clients
+- Voting finalization with automatic winner determination and point awards
 
 ### Frontend (React + Tailwind)
 - Landing page with royal theme
-- Auth pages (login, register)
+- Auth pages (login, register, separate admin login)
 - Dashboard with rank card, progress bar, stats
 - Song Queue page with add/remove functionality
 - Leaderboard with top 3 podium display
 - Badges/Accomplishments page
-- Admin panel (queue management, user management)
+- Admin panel (queue management, user management, battle management)
+- **Battle Arena Page** - Challenge opponents, view active battles
+- **Real-time Vote Popup** - WebSocket-driven popup with countdown timer
+- **Sound Effects** - Web Audio API sounds for battle start, voting, warnings, and victory
 
 ### Design
 - Dark royal theme (#0F0518 background)
@@ -69,26 +76,27 @@ A full-stack web app for King Karaoke featuring:
 
 ### P1 - Important (Completed)
 - [x] Leaderboard
-- [x] Badges system
+- [x] Badges system (16 badges across 5 categories)
 - [x] Admin panel
 - [x] Rank progression display
+- [x] QR code check-in system
+- [x] Battle/Challenge system with 5 modes
+- [x] Real-time WebSocket voting
+- [x] Sound effects for voting notifications
 
-### P2 - Nice to Have
-- [ ] Real-time WebSocket updates for queue
-- [ ] Push notifications
-- [ ] Check-in feature for venue visits
-- [ ] Battle mode (head-to-head competitions)
+### P2 - Nice to Have (Future)
+- [ ] Push notifications (mobile/browser)
+- [ ] Email reminders for events
 - [ ] Event management system
 - [ ] Reward redemption system (free songs, merch)
 - [ ] Song catalog/search integration
-- [ ] QR code check-in
+- [ ] Mobile app version
 
 ## Next Tasks
-1. Add WebSocket for real-time queue updates
-2. Implement check-in feature for venue visits (+50 pts)
-3. Add battle/voting system for song performances
-4. Build reward redemption catalog
-5. Create event management for special karaoke nights
+1. Expand notifications system (push/email)
+2. Build reward redemption catalog
+3. Create event management for special karaoke nights
+4. Refactor server.py into modular routers
 
 ## Tech Stack
 - **Frontend**: React 19, Tailwind CSS, Framer Motion, Shadcn/UI
