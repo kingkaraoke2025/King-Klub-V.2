@@ -1,13 +1,14 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, WebSocket, WebSocketDisconnect
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+import json
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
-from typing import List, Optional
+from typing import List, Optional, Dict
 import uuid
 from datetime import datetime, timezone, timedelta
 import jwt
@@ -28,6 +29,28 @@ JWT_EXPIRATION_HOURS = 24
 
 # Security
 security = HTTPBearer()
+
+# WebSocket connection manager
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except:
+                pass
+
+manager = ConnectionManager()
 
 # Create the main app
 app = FastAPI(title="King Klub API")
@@ -1126,6 +1149,106 @@ async def get_challenge(challenge_id: str, user: dict = Depends(get_current_user
 @api_router.get("/ranks")
 async def get_ranks():
     return RANKS
+
+# ==================== WEBSOCKET & LIVE VOTING ====================
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Keep connection alive, wait for messages
+            data = await websocket.receive_text()
+            # Echo back or handle ping/pong
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+@api_router.post("/challenges/{challenge_id}/open-voting")
+async def open_voting(challenge_id: str, admin: dict = Depends(get_admin_user)):
+    """Open voting for a challenge - broadcasts to all connected clients"""
+    challenge = await db.challenges.find_one({"id": challenge_id}, {"_id": 0})
+    if not challenge:
+        raise HTTPException(status_code=404, detail="Challenge not found")
+    
+    if challenge["status"] != "accepted":
+        raise HTTPException(status_code=400, detail="Challenge must be accepted to open voting")
+    
+    # Get user names
+    challenger = await db.users.find_one({"id": challenge["challenger_id"]}, {"_id": 0, "display_name": 1})
+    opponent = await db.users.find_one({"id": challenge["opponent_id"]}, {"_id": 0, "display_name": 1})
+    
+    # Mark voting as open
+    await db.challenges.update_one(
+        {"id": challenge_id},
+        {"$set": {"voting_open": True, "voting_started_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Broadcast to all connected clients
+    await manager.broadcast({
+        "type": "OPEN_VOTING",
+        "challenge": {
+            "id": challenge_id,
+            "challengerId": challenge["challenger_id"],
+            "opponentId": challenge["opponent_id"],
+            "challengerName": challenger["display_name"] if challenger else "Unknown",
+            "opponentName": opponent["display_name"] if opponent else "Unknown",
+            "challengeType": challenge["type"],
+            "typeName": CHALLENGE_TYPES.get(challenge["type"], {}).get("name", "Battle")
+        }
+    })
+    
+    return {"message": "Voting opened! All users notified.", "challenge_id": challenge_id}
+
+@api_router.post("/challenges/{challenge_id}/close-voting")
+async def close_voting(challenge_id: str, admin: dict = Depends(get_admin_user)):
+    """Close voting and finalize the challenge"""
+    challenge = await db.challenges.find_one({"id": challenge_id}, {"_id": 0})
+    if not challenge:
+        raise HTTPException(status_code=404, detail="Challenge not found")
+    
+    # Broadcast voting closed
+    await manager.broadcast({
+        "type": "CLOSE_VOTING",
+        "challengeId": challenge_id
+    })
+    
+    # Update challenge
+    await db.challenges.update_one(
+        {"id": challenge_id},
+        {"$set": {"voting_open": False}}
+    )
+    
+    return {"message": "Voting closed"}
+
+@api_router.get("/challenges/voting-open")
+async def get_open_voting_challenge():
+    """Get currently open voting challenge (if any)"""
+    challenge = await db.challenges.find_one(
+        {"voting_open": True, "status": "accepted"},
+        {"_id": 0}
+    )
+    
+    if not challenge:
+        return {"voting_open": False, "challenge": None}
+    
+    challenger = await db.users.find_one({"id": challenge["challenger_id"]}, {"_id": 0, "display_name": 1})
+    opponent = await db.users.find_one({"id": challenge["opponent_id"]}, {"_id": 0, "display_name": 1})
+    
+    return {
+        "voting_open": True,
+        "challenge": {
+            "id": challenge["id"],
+            "challengerId": challenge["challenger_id"],
+            "opponentId": challenge["opponent_id"],
+            "challengerName": challenger["display_name"] if challenger else "Unknown",
+            "opponentName": opponent["display_name"] if opponent else "Unknown",
+            "challengeType": challenge["type"],
+            "typeName": CHALLENGE_TYPES.get(challenge["type"], {}).get("name", "Battle"),
+            "votes": len(challenge.get("votes", [])),
+            "voting_started_at": challenge.get("voting_started_at")
+        }
+    }
 
 # ==================== QR CODE CHECK-IN ====================
 import hashlib

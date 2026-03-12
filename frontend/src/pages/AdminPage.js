@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Shield, Users, Mic2, CheckCircle, XCircle, Play, 
-  Plus, Minus, Crown, RefreshCw, UserCheck, Star, Gift, Search
+  Plus, Minus, Crown, RefreshCw, UserCheck, Star, Gift, Search,
+  Swords, Vote, Trophy
 } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/context/AuthContext';
@@ -21,6 +22,7 @@ const AdminPage = () => {
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState(null);
   const [pointActions, setPointActions] = useState([]);
+  const [activeBattles, setActiveBattles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -29,16 +31,18 @@ const AdminPage = () => {
 
   const fetchData = async () => {
     try {
-      const [queueRes, usersRes, statsRes, actionsRes] = await Promise.all([
+      const [queueRes, usersRes, statsRes, actionsRes, battlesRes] = await Promise.all([
         axios.get(`${API}/queue`),
         axios.get(`${API}/admin/users`),
         axios.get(`${API}/stats`),
-        axios.get(`${API}/point-actions`)
+        axios.get(`${API}/point-actions`),
+        axios.get(`${API}/challenges`)
       ]);
       setQueue(queueRes.data);
       setUsers(usersRes.data);
       setStats(statsRes.data);
       setPointActions(actionsRes.data);
+      setActiveBattles(battlesRes.data.filter(b => b.status === 'accepted'));
     } catch (error) {
       console.error('Failed to fetch admin data:', error);
       toast.error('Failed to load admin data');
@@ -135,6 +139,37 @@ const AdminPage = () => {
   const openAwardDialog = (u) => {
     setSelectedUser(u);
     setAwardDialogOpen(true);
+  };
+
+  // Battle management functions
+  const handleOpenVoting = async (challengeId) => {
+    try {
+      await axios.post(`${API}/challenges/${challengeId}/open-voting`);
+      toast.success('Voting opened! All users notified.');
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to open voting');
+    }
+  };
+
+  const handleCloseVoting = async (challengeId) => {
+    try {
+      await axios.post(`${API}/challenges/${challengeId}/close-voting`);
+      toast.success('Voting closed');
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to close voting');
+    }
+  };
+
+  const handleFinalizeBattle = async (challengeId) => {
+    try {
+      const response = await axios.post(`${API}/challenges/${challengeId}/finalize`);
+      toast.success(`${response.data.winner_name} wins the battle!`);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to finalize battle');
+    }
   };
 
   const currentSong = queue.find(item => item.status === 'current');
@@ -236,6 +271,14 @@ const AdminPage = () => {
             >
               <Gift className="w-4 h-4 mr-2" />
               Award Points
+            </TabsTrigger>
+            <TabsTrigger 
+              value="battles"
+              data-testid="battles-tab"
+              className="data-[state=active]:bg-gold/20 data-[state=active]:text-gold"
+            >
+              <Swords className="w-4 h-4 mr-2" />
+              Battles ({activeBattles.length})
             </TabsTrigger>
           </TabsList>
 
@@ -471,6 +514,87 @@ const AdminPage = () => {
                 ))}
               </div>
             </div>
+          </TabsContent>
+
+          {/* Battles Management */}
+          <TabsContent value="battles" className="mt-6 space-y-6">
+            {activeBattles.length === 0 ? (
+              <div className="glass-card p-12 text-center">
+                <Swords className="w-12 h-12 text-white/20 mx-auto mb-4" />
+                <p className="text-white/60 text-lg">No active battles</p>
+                <p className="text-white/40">Battles will appear here when users challenge each other</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {activeBattles.map((battle) => (
+                  <motion.div
+                    key={battle.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`glass-card p-6 ${battle.voting_open ? 'border-green-500/50' : 'border-white/10'}`}
+                    data-testid={`admin-battle-${battle.id}`}
+                  >
+                    {/* Status Badge */}
+                    {battle.voting_open && (
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+                        <span className="text-sm font-medium text-green-400 uppercase tracking-wider">Voting Open</span>
+                      </div>
+                    )}
+
+                    {/* Battle Info */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-gold/10 rounded-xl">
+                          <Swords className="w-6 h-6 text-gold" />
+                        </div>
+                        <div>
+                          <p className="text-white/60 text-sm">{battle.type_info?.name}</p>
+                          <h3 className="font-cinzel font-bold text-lg text-white">
+                            {battle.challenger?.display_name} <span className="text-gold">vs</span> {battle.opponent?.display_name}
+                          </h3>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-white/60 text-sm">Votes</p>
+                        <p className="text-gold font-bold text-xl">{battle.vote_count || 0}</p>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-3">
+                      {!battle.voting_open ? (
+                        <Button
+                          onClick={() => handleOpenVoting(battle.id)}
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                          data-testid={`open-voting-${battle.id}`}
+                        >
+                          <Vote className="w-4 h-4 mr-2" />
+                          Open Voting
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() => handleCloseVoting(battle.id)}
+                          className="flex-1 bg-orange-600 hover:bg-orange-700"
+                          data-testid={`close-voting-${battle.id}`}
+                        >
+                          <XCircle className="w-4 h-4 mr-2" />
+                          Close Voting
+                        </Button>
+                      )}
+                      <Button
+                        onClick={() => handleFinalizeBattle(battle.id)}
+                        className="flex-1 btn-gold"
+                        data-testid={`finalize-${battle.id}`}
+                      >
+                        <Trophy className="w-4 h-4 mr-2" />
+                        Finalize & Award
+                      </Button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
