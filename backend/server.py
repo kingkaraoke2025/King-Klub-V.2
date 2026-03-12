@@ -1116,6 +1116,35 @@ async def get_challenge_types():
     """Get all available challenge types"""
     return [{"id": k, **v} for k, v in CHALLENGE_TYPES.items()]
 
+@api_router.get("/challenges/voting-open")
+async def get_open_voting_challenge():
+    """Get currently open voting challenge (if any) - PUBLIC endpoint"""
+    challenge = await db.challenges.find_one(
+        {"voting_open": True, "status": "accepted"},
+        {"_id": 0}
+    )
+    
+    if not challenge:
+        return {"voting_open": False, "challenge": None}
+    
+    challenger = await db.users.find_one({"id": challenge["challenger_id"]}, {"_id": 0, "display_name": 1})
+    opponent = await db.users.find_one({"id": challenge["opponent_id"]}, {"_id": 0, "display_name": 1})
+    
+    return {
+        "voting_open": True,
+        "challenge": {
+            "id": challenge["id"],
+            "challengerId": challenge["challenger_id"],
+            "opponentId": challenge["opponent_id"],
+            "challengerName": challenger["display_name"] if challenger else "Unknown",
+            "opponentName": opponent["display_name"] if opponent else "Unknown",
+            "challengeType": challenge["type"],
+            "typeName": CHALLENGE_TYPES.get(challenge["type"], {}).get("name", "Battle"),
+            "votes": len(challenge.get("votes", [])),
+            "voting_started_at": challenge.get("voting_started_at")
+        }
+    }
+
 @api_router.get("/challenges/{challenge_id}")
 async def get_challenge(challenge_id: str, user: dict = Depends(get_current_user)):
     """Get a specific challenge"""
@@ -1220,35 +1249,6 @@ async def close_voting(challenge_id: str, admin: dict = Depends(get_admin_user))
     )
     
     return {"message": "Voting closed"}
-
-@api_router.get("/challenges/voting-open")
-async def get_open_voting_challenge():
-    """Get currently open voting challenge (if any)"""
-    challenge = await db.challenges.find_one(
-        {"voting_open": True, "status": "accepted"},
-        {"_id": 0}
-    )
-    
-    if not challenge:
-        return {"voting_open": False, "challenge": None}
-    
-    challenger = await db.users.find_one({"id": challenge["challenger_id"]}, {"_id": 0, "display_name": 1})
-    opponent = await db.users.find_one({"id": challenge["opponent_id"]}, {"_id": 0, "display_name": 1})
-    
-    return {
-        "voting_open": True,
-        "challenge": {
-            "id": challenge["id"],
-            "challengerId": challenge["challenger_id"],
-            "opponentId": challenge["opponent_id"],
-            "challengerName": challenger["display_name"] if challenger else "Unknown",
-            "opponentName": opponent["display_name"] if opponent else "Unknown",
-            "challengeType": challenge["type"],
-            "typeName": CHALLENGE_TYPES.get(challenge["type"], {}).get("name", "Battle"),
-            "votes": len(challenge.get("votes", [])),
-            "voting_started_at": challenge.get("voting_started_at")
-        }
-    }
 
 # ==================== QR CODE CHECK-IN ====================
 import hashlib
