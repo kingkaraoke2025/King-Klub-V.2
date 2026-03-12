@@ -22,6 +22,7 @@ import DashboardPage from "@/pages/DashboardPage";
 import QueuePage from "@/pages/QueuePage";
 import LeaderboardPage from "@/pages/LeaderboardPage";
 import AccomplishmentsPage from "@/pages/AccomplishmentsPage";
+import BattlesPage from "@/pages/BattlesPage";
 import AdminPage from "@/pages/AdminPage";
 import AdminLoginPage from "@/pages/AdminLoginPage";
 import CheckInPage from "@/pages/CheckInPage";
@@ -88,6 +89,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <AccomplishmentsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/battles"
+            element={
+              <ProtectedRoute>
+                <BattlesPage />
               </ProtectedRoute>
             }
           />

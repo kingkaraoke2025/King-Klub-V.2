@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { 
   Award, Star, Mic, Trophy, Crown, Heart, Moon, Users, Music, 
   Check, Lock, Video, ThumbsUp, UserPlus, Flame, Coins, Banknote,
-  EyeOff, Shuffle, Handshake
+  EyeOff, Shuffle, Handshake, Swords
 } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/context/AuthContext';
@@ -32,6 +32,7 @@ const badgeIcons = {
   'eye-off': EyeOff,
   shuffle: Shuffle,
   'heart-handshake': Handshake,
+  swords: Swords,
 };
 
 const categoryInfo = {
@@ -40,6 +41,7 @@ const categoryInfo = {
   social: { name: 'Social', icon: Users, color: 'from-blue-500 to-cyan-500' },
   loyalty: { name: 'Loyalty', icon: Heart, color: 'from-pink-500 to-rose-600' },
   generosity: { name: 'Generosity', icon: Coins, color: 'from-gold-start to-gold-end' },
+  battle: { name: 'Battle', icon: Swords, color: 'from-red-600 to-orange-500' },
 };
 
 const AccomplishmentsPage = () => {

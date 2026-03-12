@@ -164,6 +164,21 @@ BADGES = {
     # Generosity
     "generous_tipper": {"name": "Generous Tipper", "description": "Tipped the KJ", "icon": "coins", "points_reward": 10, "category": "generosity"},
     "big_tipper": {"name": "Big Tipper", "description": "Tipped the KJ 5 times", "icon": "banknote", "points_reward": 50, "category": "generosity"},
+    
+    # Battle badges
+    "first_battle": {"name": "First Blood", "description": "Participated in your first battle", "icon": "swords", "points_reward": 25, "category": "battle"},
+    "battle_winner": {"name": "Battle Victor", "description": "Won your first battle", "icon": "trophy", "points_reward": 50, "category": "battle"},
+    "duel_master": {"name": "Duel Master", "description": "Won 5 battles", "icon": "crown", "points_reward": 100, "category": "battle"},
+    "crowd_champion": {"name": "Crowd Champion", "description": "Won a battle with 10+ votes", "icon": "users", "points_reward": 75, "category": "battle"},
+}
+
+# Challenge types
+CHALLENGE_TYPES = {
+    "royal_duel": {"name": "Royal Duel", "description": "Classic head-to-head battle", "points_winner": 50, "points_participant": 25},
+    "blind_challenge": {"name": "Blind Challenge", "description": "Sing without seeing lyrics", "points_winner": 75, "points_participant": 35},
+    "rank_battle": {"name": "Rank Battle", "description": "Battle for rank supremacy", "points_winner": 60, "points_participant": 30},
+    "roulette": {"name": "Song Roulette", "description": "Random song assigned to both", "points_winner": 100, "points_participant": 50},
+    "harmony_duel": {"name": "Harmony Duel", "description": "Duet-style battle", "points_winner": 75, "points_participant": 40},
 }
 
 # ==================== AUTH HELPERS ====================
@@ -780,6 +795,332 @@ async def get_user_point_history(user_id: str, admin: dict = Depends(get_admin_u
         {"_id": 0}
     ).sort("timestamp", -1).to_list(100)
     return history
+
+# ==================== BATTLE/CHALLENGE SYSTEM ====================
+class ChallengeCreate(BaseModel):
+    opponent_id: str
+    challenge_type: str  # royal_duel, blind_challenge, rank_battle, roulette, harmony_duel
+
+class VoteRequest(BaseModel):
+    vote_for: str  # user_id of performer to vote for
+
+@api_router.get("/challenges")
+async def get_active_challenges(user: dict = Depends(get_current_user)):
+    """Get all active challenges (pending or accepted)"""
+    challenges = await db.challenges.find(
+        {"status": {"$in": ["pending", "accepted"]}},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    
+    # Add user names
+    for c in challenges:
+        challenger = await db.users.find_one({"id": c["challenger_id"]}, {"_id": 0, "display_name": 1, "rank": 1, "points": 1})
+        opponent = await db.users.find_one({"id": c["opponent_id"]}, {"_id": 0, "display_name": 1, "rank": 1, "points": 1})
+        c["challenger"] = challenger
+        c["opponent"] = opponent
+        c["vote_count"] = len(c.get("votes", []))
+        c["type_info"] = CHALLENGE_TYPES.get(c["type"], {})
+    
+    return challenges
+
+@api_router.get("/challenges/my")
+async def get_my_challenges(user: dict = Depends(get_current_user)):
+    """Get challenges involving the current user"""
+    challenges = await db.challenges.find(
+        {"$or": [{"challenger_id": user["id"]}, {"opponent_id": user["id"]}]},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    
+    for c in challenges:
+        challenger = await db.users.find_one({"id": c["challenger_id"]}, {"_id": 0, "display_name": 1})
+        opponent = await db.users.find_one({"id": c["opponent_id"]}, {"_id": 0, "display_name": 1})
+        c["challenger"] = challenger
+        c["opponent"] = opponent
+        c["type_info"] = CHALLENGE_TYPES.get(c["type"], {})
+    
+    return challenges
+
+@api_router.post("/challenges")
+async def create_challenge(data: ChallengeCreate, user: dict = Depends(get_current_user)):
+    """Issue a challenge to another user"""
+    if data.challenge_type not in CHALLENGE_TYPES:
+        raise HTTPException(status_code=400, detail="Invalid challenge type")
+    
+    if data.opponent_id == user["id"]:
+        raise HTTPException(status_code=400, detail="Cannot challenge yourself")
+    
+    # Check opponent exists
+    opponent = await db.users.find_one({"id": data.opponent_id})
+    if not opponent:
+        raise HTTPException(status_code=404, detail="Opponent not found")
+    
+    # Check for existing active challenge between these users
+    existing = await db.challenges.find_one({
+        "$or": [
+            {"challenger_id": user["id"], "opponent_id": data.opponent_id},
+            {"challenger_id": data.opponent_id, "opponent_id": user["id"]}
+        ],
+        "status": {"$in": ["pending", "accepted"]}
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Active challenge already exists between these users")
+    
+    challenge = {
+        "id": str(uuid.uuid4()),
+        "challenger_id": user["id"],
+        "opponent_id": data.opponent_id,
+        "type": data.challenge_type,
+        "status": "pending",
+        "votes": [],
+        "winner_id": None,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.challenges.insert_one(challenge)
+    
+    # Award first battle badge if needed
+    user_badges = list(user.get("badges", []))
+    if "first_battle" not in user_badges:
+        user_badges.append("first_battle")
+        await db.users.update_one(
+            {"id": user["id"]},
+            {"$set": {"badges": user_badges}, "$inc": {"points": BADGES["first_battle"]["points_reward"]}}
+        )
+        await db.accomplishments.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": user["id"],
+            "badge_id": "first_battle",
+            "badge_name": BADGES["first_battle"]["name"],
+            "earned_at": datetime.now(timezone.utc).isoformat()
+        })
+    
+    return {
+        "id": challenge["id"],
+        "message": f"Challenge issued to {opponent['display_name']}!",
+        "type": data.challenge_type,
+        "type_info": CHALLENGE_TYPES[data.challenge_type]
+    }
+
+@api_router.post("/challenges/{challenge_id}/accept")
+async def accept_challenge(challenge_id: str, user: dict = Depends(get_current_user)):
+    """Accept a pending challenge"""
+    challenge = await db.challenges.find_one({"id": challenge_id}, {"_id": 0})
+    if not challenge:
+        raise HTTPException(status_code=404, detail="Challenge not found")
+    
+    if challenge["opponent_id"] != user["id"]:
+        raise HTTPException(status_code=403, detail="Only the challenged user can accept")
+    
+    if challenge["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Challenge is not pending")
+    
+    await db.challenges.update_one(
+        {"id": challenge_id},
+        {"$set": {"status": "accepted"}}
+    )
+    
+    # Award first battle badge to opponent if needed
+    user_badges = list(user.get("badges", []))
+    if "first_battle" not in user_badges:
+        user_badges.append("first_battle")
+        await db.users.update_one(
+            {"id": user["id"]},
+            {"$set": {"badges": user_badges}, "$inc": {"points": BADGES["first_battle"]["points_reward"]}}
+        )
+        await db.accomplishments.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": user["id"],
+            "badge_id": "first_battle",
+            "badge_name": BADGES["first_battle"]["name"],
+            "earned_at": datetime.now(timezone.utc).isoformat()
+        })
+    
+    return {"message": "Challenge accepted! Let the battle begin!"}
+
+@api_router.post("/challenges/{challenge_id}/decline")
+async def decline_challenge(challenge_id: str, user: dict = Depends(get_current_user)):
+    """Decline a pending challenge"""
+    challenge = await db.challenges.find_one({"id": challenge_id}, {"_id": 0})
+    if not challenge:
+        raise HTTPException(status_code=404, detail="Challenge not found")
+    
+    if challenge["opponent_id"] != user["id"]:
+        raise HTTPException(status_code=403, detail="Only the challenged user can decline")
+    
+    if challenge["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Challenge is not pending")
+    
+    await db.challenges.update_one(
+        {"id": challenge_id},
+        {"$set": {"status": "declined"}}
+    )
+    
+    return {"message": "Challenge declined"}
+
+@api_router.post("/challenges/{challenge_id}/vote")
+async def vote_for_performer(challenge_id: str, data: VoteRequest, user: dict = Depends(get_current_user)):
+    """Vote for a performer in a battle"""
+    challenge = await db.challenges.find_one({"id": challenge_id}, {"_id": 0})
+    if not challenge:
+        raise HTTPException(status_code=404, detail="Challenge not found")
+    
+    if challenge["status"] != "accepted":
+        raise HTTPException(status_code=400, detail="Challenge is not active")
+    
+    # Cannot vote for yourself if you're a participant
+    if user["id"] in [challenge["challenger_id"], challenge["opponent_id"]]:
+        raise HTTPException(status_code=400, detail="Participants cannot vote in their own battle")
+    
+    # Check vote target is valid
+    if data.vote_for not in [challenge["challenger_id"], challenge["opponent_id"]]:
+        raise HTTPException(status_code=400, detail="Invalid vote target")
+    
+    # Check if already voted
+    votes = challenge.get("votes", [])
+    if any(v["voter_id"] == user["id"] for v in votes):
+        raise HTTPException(status_code=400, detail="You have already voted")
+    
+    # Add vote
+    votes.append({
+        "voter_id": user["id"],
+        "vote_for": data.vote_for
+    })
+    
+    await db.challenges.update_one(
+        {"id": challenge_id},
+        {"$set": {"votes": votes}}
+    )
+    
+    return {"message": "Vote recorded!", "total_votes": len(votes)}
+
+@api_router.post("/challenges/{challenge_id}/finalize")
+async def finalize_challenge(challenge_id: str, admin: dict = Depends(get_admin_user)):
+    """Finalize a challenge and determine the winner (admin only)"""
+    challenge = await db.challenges.find_one({"id": challenge_id}, {"_id": 0})
+    if not challenge:
+        raise HTTPException(status_code=404, detail="Challenge not found")
+    
+    if challenge["status"] != "accepted":
+        raise HTTPException(status_code=400, detail="Challenge must be accepted to finalize")
+    
+    votes = challenge.get("votes", [])
+    if len(votes) == 0:
+        raise HTTPException(status_code=400, detail="No votes yet")
+    
+    # Count votes
+    vote_count = {}
+    for v in votes:
+        vote_count[v["vote_for"]] = vote_count.get(v["vote_for"], 0) + 1
+    
+    # Determine winner
+    winner_id = max(vote_count.keys(), key=lambda k: vote_count[k])
+    loser_id = challenge["challenger_id"] if winner_id == challenge["opponent_id"] else challenge["opponent_id"]
+    
+    # Update challenge
+    await db.challenges.update_one(
+        {"id": challenge_id},
+        {"$set": {"status": "completed", "winner_id": winner_id}}
+    )
+    
+    # Get challenge type info
+    type_info = CHALLENGE_TYPES.get(challenge["type"], {"points_winner": 50, "points_participant": 25})
+    
+    # Award points to winner
+    winner = await db.users.find_one({"id": winner_id}, {"_id": 0})
+    winner_badges = list(winner.get("badges", []))
+    winner_bonus = 0
+    new_badges = []
+    
+    # Battle winner badge
+    if "battle_winner" not in winner_badges:
+        winner_badges.append("battle_winner")
+        new_badges.append("battle_winner")
+        winner_bonus += BADGES["battle_winner"]["points_reward"]
+    
+    # Track wins
+    battle_wins = winner.get("battle_wins", 0) + 1
+    
+    # Duel master badge (5 wins)
+    if battle_wins >= 5 and "duel_master" not in winner_badges:
+        winner_badges.append("duel_master")
+        new_badges.append("duel_master")
+        winner_bonus += BADGES["duel_master"]["points_reward"]
+    
+    # Crowd champion badge (10+ votes)
+    if vote_count[winner_id] >= 10 and "crowd_champion" not in winner_badges:
+        winner_badges.append("crowd_champion")
+        new_badges.append("crowd_champion")
+        winner_bonus += BADGES["crowd_champion"]["points_reward"]
+    
+    await db.users.update_one(
+        {"id": winner_id},
+        {
+            "$inc": {"points": type_info["points_winner"] + winner_bonus},
+            "$set": {"badges": winner_badges, "battle_wins": battle_wins}
+        }
+    )
+    
+    # Record badges
+    for badge_id in new_badges:
+        await db.accomplishments.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": winner_id,
+            "badge_id": badge_id,
+            "badge_name": BADGES[badge_id]["name"],
+            "earned_at": datetime.now(timezone.utc).isoformat()
+        })
+    
+    # Award participation points to loser
+    await db.users.update_one(
+        {"id": loser_id},
+        {"$inc": {"points": type_info["points_participant"]}}
+    )
+    
+    winner_user = await db.users.find_one({"id": winner_id}, {"_id": 0, "display_name": 1})
+    
+    return {
+        "message": f"{winner_user['display_name']} wins the battle!",
+        "winner_id": winner_id,
+        "winner_name": winner_user["display_name"],
+        "winner_votes": vote_count[winner_id],
+        "loser_votes": vote_count.get(loser_id, 0),
+        "points_awarded": type_info["points_winner"],
+        "badges_earned": new_badges
+    }
+
+@api_router.get("/challenges/types")
+async def get_challenge_types():
+    """Get all available challenge types"""
+    return [{"id": k, **v} for k, v in CHALLENGE_TYPES.items()]
+
+@api_router.get("/challenges/{challenge_id}")
+async def get_challenge(challenge_id: str, user: dict = Depends(get_current_user)):
+    """Get a specific challenge"""
+    challenge = await db.challenges.find_one({"id": challenge_id}, {"_id": 0})
+    if not challenge:
+        raise HTTPException(status_code=404, detail="Challenge not found")
+    
+    challenger = await db.users.find_one({"id": challenge["challenger_id"]}, {"_id": 0, "display_name": 1, "rank": 1, "points": 1})
+    opponent = await db.users.find_one({"id": challenge["opponent_id"]}, {"_id": 0, "display_name": 1, "rank": 1, "points": 1})
+    
+    # Count votes per person
+    votes = challenge.get("votes", [])
+    vote_count = {}
+    for v in votes:
+        vote_count[v["vote_for"]] = vote_count.get(v["vote_for"], 0) + 1
+    
+    # Check if current user voted
+    user_voted = any(v["voter_id"] == user["id"] for v in votes)
+    
+    challenge["challenger"] = challenger
+    challenge["opponent"] = opponent
+    challenge["type_info"] = CHALLENGE_TYPES.get(challenge["type"], {})
+    challenge["vote_count"] = len(votes)
+    challenge["challenger_votes"] = vote_count.get(challenge["challenger_id"], 0)
+    challenge["opponent_votes"] = vote_count.get(challenge["opponent_id"], 0)
+    challenge["user_voted"] = user_voted
+    
+    return challenge
 
 # ==================== RANKS INFO ====================
 @api_router.get("/ranks")

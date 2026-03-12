@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { Crown, Mic2, Trophy, Award, Settings, LogOut, Menu, X, Shield, QrCode } from 'lucide-react';
+import { Crown, Mic2, Trophy, Award, Settings, LogOut, Menu, X, Shield, QrCode, Swords } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -9,6 +9,7 @@ const LOGO_URL = "https://customer-assets.emergentagent.com/job_karaoke-kingdom/
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: Crown },
   { path: '/queue', label: 'Song Queue', icon: Mic2 },
+  { path: '/battles', label: 'Battles', icon: Swords },
   { path: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { path: '/accomplishments', label: 'Badges', icon: Award },
 ];
