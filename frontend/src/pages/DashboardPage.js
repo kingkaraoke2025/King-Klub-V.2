@@ -8,6 +8,7 @@ import {
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/context/AuthContext';
 import { Progress } from '@/components/ui/progress';
+import { getRankName } from '@/utils/rankUtils';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -54,6 +55,9 @@ const DashboardPage = () => {
     : 100;
 
   const RankIcon = rankIcons[user?.rank?.icon] || Crown;
+  const currentRankName = getRankName(user?.rank, user?.title_preference);
+  const nextRankName = getRankName(user?.next_rank, user?.title_preference);
+  const isMaxRank = currentRankName === 'Prince' || currentRankName === 'Princess';
 
   if (loading) {
     return (
@@ -92,18 +96,18 @@ const DashboardPage = () => {
           >
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
               <div className={`p-6 rounded-2xl ${
-                user?.rank?.name === 'Prince' 
+                isMaxRank 
                   ? 'bg-gradient-to-br from-gold-start to-gold-end' 
                   : 'bg-purple-deep/50'
               }`}>
                 <RankIcon className={`w-12 h-12 ${
-                  user?.rank?.name === 'Prince' ? 'text-black' : 'text-gold'
+                  isMaxRank ? 'text-black' : 'text-gold'
                 }`} />
               </div>
               <div className="flex-1">
                 <p className="text-white/60 text-sm uppercase tracking-wider mb-1">Current Rank</p>
                 <h2 className="font-cinzel font-bold text-4xl text-gold mb-2">
-                  {user?.rank?.name}
+                  {currentRankName}
                 </h2>
                 <p className="text-white/80 text-lg mb-4">
                   <span className="text-gold font-bold">{user?.points}</span> points earned
@@ -112,7 +116,7 @@ const DashboardPage = () => {
                 {user?.next_rank && (
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-white/60">Progress to {user.next_rank.name}</span>
+                      <span className="text-white/60">Progress to {nextRankName}</span>
                       <span className="text-gold">{user.next_rank.min_points - user.points} pts to go</span>
                     </div>
                     <Progress value={progressToNextRank} className="h-2 bg-white/10" />

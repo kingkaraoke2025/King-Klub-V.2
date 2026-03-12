@@ -58,12 +58,12 @@ api_router = APIRouter(prefix="/api")
 
 # ==================== RANK SYSTEM ====================
 RANKS = [
-    {"name": "Peasant", "min_points": 0, "icon": "shield"},
-    {"name": "Squire", "min_points": 100, "icon": "sword"},
-    {"name": "Knight", "min_points": 300, "icon": "swords"},
-    {"name": "Count", "min_points": 600, "icon": "crown"},
-    {"name": "Duke", "min_points": 1000, "icon": "gem"},
-    {"name": "Prince", "min_points": 2000, "icon": "sparkles"},
+    {"name": "Peasant", "name_female": "Peasant", "min_points": 0, "icon": "shield"},
+    {"name": "Squire", "name_female": "Lady", "min_points": 100, "icon": "sword"},
+    {"name": "Knight", "name_female": "Dame", "min_points": 300, "icon": "swords"},
+    {"name": "Count", "name_female": "Countess", "min_points": 600, "icon": "crown"},
+    {"name": "Duke", "name_female": "Duchess", "min_points": 1000, "icon": "gem"},
+    {"name": "Prince", "name_female": "Princess", "min_points": 2000, "icon": "sparkles"},
 ]
 
 def get_rank(points: int) -> dict:
@@ -84,6 +84,7 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     display_name: str
+    title_preference: Optional[str] = "male"  # "male" or "female" for rank titles
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -102,6 +103,7 @@ class UserResponse(BaseModel):
     badges: List[str]
     is_admin: bool
     created_at: str
+    title_preference: Optional[str] = "male"
 
 class UserPublic(BaseModel):
     id: str
@@ -250,6 +252,7 @@ async def register(data: UserCreate):
         "email": data.email,
         "password": hash_password(data.password),
         "display_name": data.display_name,
+        "title_preference": data.title_preference or "male",
         "points": 0,
         "songs_performed": 0,
         "consecutive_visits": 0,
@@ -270,6 +273,7 @@ async def register(data: UserCreate):
             "id": user_id,
             "email": data.email,
             "display_name": data.display_name,
+            "title_preference": user["title_preference"],
             "points": 0,
             "songs_performed": 0,
             "consecutive_visits": 0,
@@ -313,6 +317,7 @@ async def login(data: UserLogin):
             "id": user["id"],
             "email": user["email"],
             "display_name": user["display_name"],
+            "title_preference": user.get("title_preference", "male"),
             "points": user["points"],
             "songs_performed": user["songs_performed"],
             "consecutive_visits": consecutive_visits,
@@ -332,6 +337,7 @@ async def get_me(user: dict = Depends(get_current_user)):
         "id": user["id"],
         "email": user["email"],
         "display_name": user["display_name"],
+        "title_preference": user.get("title_preference", "male"),
         "points": user["points"],
         "songs_performed": user["songs_performed"],
         "consecutive_visits": user["consecutive_visits"],
@@ -341,6 +347,23 @@ async def get_me(user: dict = Depends(get_current_user)):
         "is_admin": user.get("is_admin", False),
         "created_at": user["created_at"]
     }
+
+
+class UpdateTitlePreferenceRequest(BaseModel):
+    title_preference: str  # "male" or "female"
+
+@api_router.put("/auth/title-preference")
+async def update_title_preference(data: UpdateTitlePreferenceRequest, user: dict = Depends(get_current_user)):
+    if data.title_preference not in ["male", "female"]:
+        raise HTTPException(status_code=400, detail="Invalid title preference. Use 'male' or 'female'")
+    
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"title_preference": data.title_preference}}
+    )
+    
+    return {"message": "Title preference updated", "title_preference": data.title_preference}
+
 
 # ==================== SONG QUEUE ENDPOINTS ====================
 @api_router.get("/queue")
@@ -524,6 +547,7 @@ async def get_leaderboard():
             "position": i + 1,
             "id": user["id"],
             "display_name": user["display_name"],
+            "title_preference": user.get("title_preference", "male"),
             "points": user["points"],
             "rank": get_rank(user["points"]),
             "songs_performed": user["songs_performed"],

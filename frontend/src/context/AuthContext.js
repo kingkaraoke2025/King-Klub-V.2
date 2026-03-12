@@ -63,11 +63,12 @@ export const AuthProvider = ({ children }) => {
     return userData;
   };
 
-  const register = async (email, password, displayName) => {
+  const register = async (email, password, displayName, titlePreference = 'male') => {
     const response = await axios.post(`${API}/auth/register`, {
       email,
       password,
-      display_name: displayName
+      display_name: displayName,
+      title_preference: titlePreference
     });
     const { token: newToken, user: userData } = response.data;
     
@@ -76,6 +77,14 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
     
     return userData;
+  };
+
+  const updateTitlePreference = async (titlePreference) => {
+    const response = await axios.put(`${API}/auth/title-preference`, {
+      title_preference: titlePreference
+    });
+    setUser(prev => ({ ...prev, title_preference: titlePreference }));
+    return response.data;
   };
 
   const logout = () => {
@@ -103,6 +112,7 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     refreshUser,
+    updateTitlePreference,
     isAuthenticated: !!user,
     isAdmin: user?.is_admin || false
   };

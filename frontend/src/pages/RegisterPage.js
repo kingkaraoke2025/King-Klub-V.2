@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, User, ArrowRight, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Eye, EyeOff, Sparkles, Crown } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 
@@ -12,6 +12,7 @@ const RegisterPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [titlePreference, setTitlePreference] = useState('male');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
@@ -33,7 +34,7 @@ const RegisterPage = () => {
     setLoading(true);
 
     try {
-      await register(email, password, displayName);
+      await register(email, password, displayName, titlePreference);
       toast.success('Welcome to the Kingdom, noble Peasant!');
       navigate('/dashboard');
     } catch (error) {
@@ -137,6 +138,51 @@ const RegisterPage = () => {
                   data-testid="confirm-password-input"
                   className="w-full royal-input pl-12"
                 />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                <Crown className="inline w-4 h-4 mr-1 text-gold" />
+                Royal Title Preference
+              </label>
+              <div className="flex gap-4">
+                <label className={`flex-1 cursor-pointer p-3 rounded-lg border transition-all ${
+                  titlePreference === 'male' 
+                    ? 'border-gold bg-gold/10 text-gold' 
+                    : 'border-white/20 text-white/60 hover:border-white/40'
+                }`}>
+                  <input
+                    type="radio"
+                    name="titlePreference"
+                    value="male"
+                    checked={titlePreference === 'male'}
+                    onChange={(e) => setTitlePreference(e.target.value)}
+                    className="sr-only"
+                    data-testid="title-male-radio"
+                  />
+                  <span className="block text-center font-cinzel">
+                    Squire / Knight / Count / Duke / Prince
+                  </span>
+                </label>
+                <label className={`flex-1 cursor-pointer p-3 rounded-lg border transition-all ${
+                  titlePreference === 'female' 
+                    ? 'border-gold bg-gold/10 text-gold' 
+                    : 'border-white/20 text-white/60 hover:border-white/40'
+                }`}>
+                  <input
+                    type="radio"
+                    name="titlePreference"
+                    value="female"
+                    checked={titlePreference === 'female'}
+                    onChange={(e) => setTitlePreference(e.target.value)}
+                    className="sr-only"
+                    data-testid="title-female-radio"
+                  />
+                  <span className="block text-center font-cinzel">
+                    Lady / Dame / Countess / Duchess / Princess
+                  </span>
+                </label>
               </div>
             </div>
 

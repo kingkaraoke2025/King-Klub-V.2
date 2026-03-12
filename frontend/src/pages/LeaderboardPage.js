@@ -3,19 +3,28 @@ import { motion } from 'framer-motion';
 import { Trophy, Crown, Medal, Star, TrendingUp } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/context/AuthContext';
+import { getRankName } from '@/utils/rankUtils';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Rank colors support both male and female rank names
 const rankColors = {
   Peasant: 'bg-gray-500',
   Squire: 'bg-green-500',
+  Lady: 'bg-green-500',
   Knight: 'bg-blue-500',
+  Dame: 'bg-blue-500',
   Count: 'bg-purple-500',
+  Countess: 'bg-purple-500',
   Duke: 'bg-pink-500',
+  Duchess: 'bg-pink-500',
   Prince: 'bg-gradient-to-r from-gold-start to-gold-end',
+  Princess: 'bg-gradient-to-r from-gold-start to-gold-end',
 };
+
+const isMaxRank = (rankName) => rankName === 'Prince' || rankName === 'Princess';
 
 const LeaderboardPage = () => {
   const { user } = useAuth();
@@ -80,8 +89,8 @@ const LeaderboardPage = () => {
                 <div className="text-3xl font-bold text-gray-400 mb-1">2</div>
                 <h3 className="font-cinzel font-bold text-white truncate">{leaderboard[1]?.display_name}</h3>
                 <p className="text-gold font-bold">{leaderboard[1]?.points} pts</p>
-                <span className={`inline-block mt-2 px-2 py-0.5 rounded-full text-xs ${rankColors[leaderboard[1]?.rank?.name]} ${leaderboard[1]?.rank?.name === 'Prince' ? 'text-black' : 'text-white'}`}>
-                  {leaderboard[1]?.rank?.name}
+                <span className={`inline-block mt-2 px-2 py-0.5 rounded-full text-xs ${rankColors[getRankName(leaderboard[1]?.rank, leaderboard[1]?.title_preference)]} ${isMaxRank(getRankName(leaderboard[1]?.rank, leaderboard[1]?.title_preference)) ? 'text-black' : 'text-white'}`}>
+                  {getRankName(leaderboard[1]?.rank, leaderboard[1]?.title_preference)}
                 </span>
               </div>
             </div>
@@ -95,8 +104,8 @@ const LeaderboardPage = () => {
                 <div className="text-4xl font-bold text-gold mb-1">1</div>
                 <h3 className="font-cinzel font-bold text-xl text-white truncate">{leaderboard[0]?.display_name}</h3>
                 <p className="text-gold font-bold text-lg">{leaderboard[0]?.points} pts</p>
-                <span className={`inline-block mt-2 px-3 py-1 rounded-full text-sm ${rankColors[leaderboard[0]?.rank?.name]} ${leaderboard[0]?.rank?.name === 'Prince' ? 'text-black' : 'text-white'}`}>
-                  {leaderboard[0]?.rank?.name}
+                <span className={`inline-block mt-2 px-3 py-1 rounded-full text-sm ${rankColors[getRankName(leaderboard[0]?.rank, leaderboard[0]?.title_preference)]} ${isMaxRank(getRankName(leaderboard[0]?.rank, leaderboard[0]?.title_preference)) ? 'text-black' : 'text-white'}`}>
+                  {getRankName(leaderboard[0]?.rank, leaderboard[0]?.title_preference)}
                 </span>
               </div>
             </div>
@@ -110,8 +119,8 @@ const LeaderboardPage = () => {
                 <div className="text-2xl font-bold text-amber-700 mb-1">3</div>
                 <h3 className="font-cinzel font-bold text-white truncate">{leaderboard[2]?.display_name}</h3>
                 <p className="text-gold font-bold">{leaderboard[2]?.points} pts</p>
-                <span className={`inline-block mt-2 px-2 py-0.5 rounded-full text-xs ${rankColors[leaderboard[2]?.rank?.name]} ${leaderboard[2]?.rank?.name === 'Prince' ? 'text-black' : 'text-white'}`}>
-                  {leaderboard[2]?.rank?.name}
+                <span className={`inline-block mt-2 px-2 py-0.5 rounded-full text-xs ${rankColors[getRankName(leaderboard[2]?.rank, leaderboard[2]?.title_preference)]} ${isMaxRank(getRankName(leaderboard[2]?.rank, leaderboard[2]?.title_preference)) ? 'text-black' : 'text-white'}`}>
+                  {getRankName(leaderboard[2]?.rank, leaderboard[2]?.title_preference)}
                 </span>
               </div>
             </div>
@@ -153,7 +162,9 @@ const LeaderboardPage = () => {
           </div>
           
           <div className="divide-y divide-white/5">
-            {leaderboard.map((entry, index) => (
+            {leaderboard.map((entry, index) => {
+              const entryRankName = getRankName(entry.rank, entry.title_preference);
+              return (
               <motion.div
                 key={entry.id}
                 initial={{ opacity: 0, x: -20 }}
@@ -191,8 +202,8 @@ const LeaderboardPage = () => {
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${rankColors[entry.rank?.name]} ${entry.rank?.name === 'Prince' ? 'text-black' : 'text-white'}`}>
-                      {entry.rank?.name}
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${rankColors[entryRankName]} ${isMaxRank(entryRankName) ? 'text-black' : 'text-white'}`}>
+                      {entryRankName}
                     </span>
                     <span className="text-white/40 text-xs">{entry.songs_performed} songs</span>
                   </div>
@@ -216,7 +227,7 @@ const LeaderboardPage = () => {
                   )}
                 </div>
               </motion.div>
-            ))}
+            )})}
           </div>
         </motion.div>
 
