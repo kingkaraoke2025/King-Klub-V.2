@@ -85,6 +85,7 @@ class UserCreate(BaseModel):
     password: str
     display_name: str
     title_preference: Optional[str] = "male"  # "male" or "female" for rank titles
+    referred_by: Optional[str] = None  # User ID of the person who referred them
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -178,7 +179,9 @@ BADGES = {
     # Social badges
     "duet_singer": {"name": "Duet Partner", "description": "Performed your first duet", "icon": "users", "points_reward": 10, "category": "social"},
     "duet_master": {"name": "Duet Master", "description": "Performed 5 duets", "icon": "heart-handshake", "points_reward": 50, "category": "social"},
-    "social_butterfly": {"name": "Social Butterfly", "description": "Brought 3 friends to King Karaoke", "icon": "user-plus", "points_reward": 50, "category": "social"},
+    "royal_recruiter": {"name": "Royal Recruiter", "description": "Bring 1 friend to King Karaoke", "icon": "user-plus", "points_reward": 10, "category": "social"},
+    "social_butterfly": {"name": "Social Butterfly", "description": "Bring 3 friends to King Karaoke", "icon": "users-round", "points_reward": 30, "category": "social"},
+    "kk_ambassador": {"name": "King Karaoke Ambassador", "description": "Bring 5 friends to King Karaoke", "icon": "megaphone", "points_reward": 50, "category": "social"},
     "influencer": {"name": "Influencer", "description": "Posted to TikTok", "icon": "video", "points_reward": 200, "category": "social"},
     "super_fan": {"name": "Super Fan", "description": "Followed on TikTok & Facebook", "icon": "thumbs-up", "points_reward": 20, "category": "social"},
     
@@ -247,11 +250,63 @@ async def get_admin_user(credentials: HTTPAuthorizationCredentials = Depends(sec
     return user
 
 # ==================== AUTH ENDPOINTS ====================
+async def check_referral_badges(referrer_id: str):
+    """Check and award referral badges to the referrer"""
+    # Count how many users this person has referred
+    referral_count = await db.users.count_documents({"referred_by": referrer_id})
+    
+    referrer = await db.users.find_one({"id": referrer_id}, {"_id": 0})
+    if not referrer:
+        return
+    
+    badges = list(referrer.get("badges", []))
+    badges_earned = []
+    bonus_points = 0
+    
+    # 1 friend badge
+    if referral_count >= 1 and "royal_recruiter" not in badges:
+        badges.append("royal_recruiter")
+        badges_earned.append("royal_recruiter")
+        bonus_points += BADGES["royal_recruiter"]["points_reward"]
+    
+    # 3 friends badge
+    if referral_count >= 3 and "social_butterfly" not in badges:
+        badges.append("social_butterfly")
+        badges_earned.append("social_butterfly")
+        bonus_points += BADGES["social_butterfly"]["points_reward"]
+    
+    # 5 friends badge
+    if referral_count >= 5 and "kk_ambassador" not in badges:
+        badges.append("kk_ambassador")
+        badges_earned.append("kk_ambassador")
+        bonus_points += BADGES["kk_ambassador"]["points_reward"]
+    
+    if badges_earned:
+        await db.users.update_one(
+            {"id": referrer_id},
+            {"$set": {"badges": badges}, "$inc": {"points": bonus_points}}
+        )
+        for badge_id in badges_earned:
+            await db.accomplishments.insert_one({
+                "id": str(uuid.uuid4()),
+                "user_id": referrer_id,
+                "badge_id": badge_id,
+                "badge_name": BADGES[badge_id]["name"],
+                "earned_at": datetime.now(timezone.utc).isoformat()
+            })
+
 @api_router.post("/auth/register")
 async def register(data: UserCreate):
     existing = await db.users.find_one({"email": data.email})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Validate referrer if provided
+    referrer_id = None
+    if data.referred_by:
+        referrer = await db.users.find_one({"id": data.referred_by})
+        if referrer:
+            referrer_id = data.referred_by
     
     user_id = str(uuid.uuid4())
     user = {
@@ -260,6 +315,7 @@ async def register(data: UserCreate):
         "password": hash_password(data.password),
         "display_name": data.display_name,
         "title_preference": data.title_preference or "male",
+        "referred_by": referrer_id,
         "points": 0,
         "songs_performed": 0,
         "consecutive_visits": 0,
@@ -269,6 +325,10 @@ async def register(data: UserCreate):
         "last_visit": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user)
+    
+    # Check referral badges for the inviter
+    if referrer_id:
+        await check_referral_badges(referrer_id)
     
     token = create_token(user_id)
     rank = get_rank(0)
@@ -354,6 +414,37 @@ async def get_me(user: dict = Depends(get_current_user)):
         "is_admin": user.get("is_admin", False),
         "created_at": user["created_at"]
     }
+
+
+@api_router.get("/auth/referral-stats")
+async def get_referral_stats(user: dict = Depends(get_current_user)):
+    """Get user's referral statistics and link"""
+    referral_count = await db.users.count_documents({"referred_by": user["id"]})
+    
+    # Get list of referred users
+    referred_users = await db.users.find(
+        {"referred_by": user["id"]},
+        {"_id": 0, "display_name": 1, "created_at": 1}
+    ).to_list(50)
+    
+    return {
+        "referral_code": user["id"],
+        "total_referrals": referral_count,
+        "referred_users": referred_users,
+        "next_badge": (
+            "Royal Recruiter" if referral_count < 1 else
+            "Social Butterfly" if referral_count < 3 else
+            "King Karaoke Ambassador" if referral_count < 5 else
+            None
+        ),
+        "referrals_to_next": (
+            1 - referral_count if referral_count < 1 else
+            3 - referral_count if referral_count < 3 else
+            5 - referral_count if referral_count < 5 else
+            0
+        )
+    }
+
 
 
 class UpdateTitlePreferenceRequest(BaseModel):

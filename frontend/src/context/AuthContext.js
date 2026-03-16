@@ -63,12 +63,13 @@ export const AuthProvider = ({ children }) => {
     return userData;
   };
 
-  const register = async (email, password, displayName, titlePreference = 'male') => {
+  const register = async (email, password, displayName, titlePreference = 'male', referredBy = null) => {
     const response = await axios.post(`${API}/auth/register`, {
       email,
       password,
       display_name: displayName,
-      title_preference: titlePreference
+      title_preference: titlePreference,
+      referred_by: referredBy
     });
     const { token: newToken, user: userData } = response.data;
     

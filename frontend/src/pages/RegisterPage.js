@@ -1,22 +1,32 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, User, ArrowRight, Eye, EyeOff, Sparkles, Crown } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Eye, EyeOff, Sparkles, Crown, UserPlus } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_karaoke-kingdom/artifacts/ttig1x57_King%20Karaoke%203.png";
 
 const RegisterPage = () => {
+  const [searchParams] = useSearchParams();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [titlePreference, setTitlePreference] = useState('male');
+  const [referralCode, setReferralCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
+
+  // Check for referral code in URL
+  useEffect(() => {
+    const ref = searchParams.get('ref');
+    if (ref) {
+      setReferralCode(ref);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -34,7 +44,7 @@ const RegisterPage = () => {
     setLoading(true);
 
     try {
-      await register(email, password, displayName, titlePreference);
+      await register(email, password, displayName, titlePreference, referralCode || null);
       toast.success('Welcome to the Kingdom, noble Peasant!');
       navigate('/dashboard');
     } catch (error) {
@@ -184,6 +194,28 @@ const RegisterPage = () => {
                   </span>
                 </label>
               </div>
+            </div>
+
+            {/* Referral Code */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                <UserPlus className="inline w-4 h-4 mr-1 text-gold" />
+                Referral Code <span className="text-white/40">(optional)</span>
+              </label>
+              <div className="relative">
+                <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+                <input
+                  type="text"
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value)}
+                  placeholder="Enter friend's referral code"
+                  data-testid="referral-code-input"
+                  className="w-full royal-input pl-12"
+                />
+              </div>
+              {referralCode && (
+                <p className="text-green-400 text-xs mt-1">Joining via referral link!</p>
+              )}
             </div>
 
             <button
