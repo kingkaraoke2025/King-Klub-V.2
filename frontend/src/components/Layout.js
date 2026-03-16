@@ -1,8 +1,9 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { Crown, Mic2, Trophy, Award, Settings, LogOut, Menu, X, Shield, QrCode, Swords } from 'lucide-react';
+import { Crown, Mic2, Trophy, Award, Settings, LogOut, Menu, X, Shield, QrCode, Swords, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getRankName } from '@/utils/rankUtils';
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_karaoke-kingdom/artifacts/ttig1x57_King%20Karaoke%203.png";
 
@@ -12,6 +13,7 @@ const navItems = [
   { path: '/battles', label: 'Battles', icon: Swords },
   { path: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { path: '/accomplishments', label: 'Badges', icon: Award },
+  { path: '/how-to-earn', label: 'Earn Points', icon: Sparkles },
 ];
 
 const adminNavItems = [
@@ -73,7 +75,7 @@ export const Layout = ({ children }) => {
             <div className="hidden md:flex items-center gap-4">
               <div className="text-right">
                 <p className="text-sm font-medium text-white">{user?.display_name}</p>
-                <p className="text-xs text-gold">{user?.rank?.name}</p>
+                <p className="text-xs text-gold">{getRankName(user?.rank, user?.title_preference)}</p>
               </div>
               <button
                 onClick={handleLogout}
@@ -127,7 +129,7 @@ export const Layout = ({ children }) => {
                 <div className="pt-4 border-t border-white/10">
                   <div className="px-4 py-2">
                     <p className="text-sm font-medium text-white">{user?.display_name}</p>
-                    <p className="text-xs text-gold">{user?.rank?.name}</p>
+                    <p className="text-xs text-gold">{getRankName(user?.rank, user?.title_preference)}</p>
                   </div>
                   <button
                     onClick={handleLogout}

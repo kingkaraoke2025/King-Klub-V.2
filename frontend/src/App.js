@@ -34,6 +34,7 @@ import AdminPage from "@/pages/AdminPage";
 import AdminLoginPage from "@/pages/AdminLoginPage";
 import CheckInPage from "@/pages/CheckInPage";
 import QRCheckInPage from "@/pages/QRCheckInPage";
+import HowToEarnPage from "@/pages/HowToEarnPage";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, adminOnly = false }) => {
@@ -151,6 +152,7 @@ const AppContent = () => {
           }
         />
         <Route path="/checkin/:venueCode" element={<CheckInPage />} />
+        <Route path="/how-to-earn" element={<HowToEarnPage />} />
       </Routes>
       
       {/* Global Vote Popup */}
