@@ -158,6 +158,7 @@ POINT_ACTIONS = {
     "follow_tiktok": {"name": "Follow on TikTok", "points": 10, "description": "Follow King Karaoke on TikTok"},
     "follow_facebook": {"name": "Follow on Facebook", "points": 10, "description": "Follow King Karaoke on Facebook"},
     "tip_kj": {"name": "Tip the KJ", "points": 10, "description": "Show appreciation to the KJ"},
+    "tip_bartender": {"name": "Tip the Bartender", "points": 10, "description": "Show appreciation to the bartender"},
     "bar_song": {"name": "King Karaoke Bar Song", "points": 100, "description": "Perform the official bar song"},
 }
 
@@ -186,9 +187,12 @@ BADGES = {
     "dedicated_fan": {"name": "Dedicated Fan", "description": "Visited 5 consecutive nights", "icon": "flame", "points_reward": 50, "category": "loyalty"},
     "loyal_patron": {"name": "Loyal Patron", "description": "Visited 10 consecutive nights", "icon": "award", "points_reward": 100, "category": "loyalty"},
     
-    # Generosity
+    # Generosity - KJ tips
     "generous_tipper": {"name": "Generous Tipper", "description": "Tipped the KJ", "icon": "coins", "points_reward": 10, "category": "generosity"},
     "big_tipper": {"name": "Big Tipper", "description": "Tipped the KJ 5 times", "icon": "banknote", "points_reward": 50, "category": "generosity"},
+    # Generosity - Bartender tips
+    "benevolent_tipper": {"name": "Benevolent Tipper", "description": "Tipped the bartender", "icon": "beer", "points_reward": 10, "category": "generosity"},
+    "huge_tipper": {"name": "Huge Tipper", "description": "Tipped the bartender 5 times", "icon": "gift", "points_reward": 50, "category": "generosity"},
     
     # Battle badges
     "first_battle": {"name": "First Blood", "description": "Participated in your first battle", "icon": "swords", "points_reward": 25, "category": "battle"},
@@ -689,7 +693,7 @@ async def check_and_award_badges(user_id: str, user_data: dict):
         new_badges.append("loyal_patron")
         bonus_points += BADGES["loyal_patron"]["points_reward"]
     
-    # Tipper badges
+    # Tipper badges (KJ)
     if tips >= 1 and "generous_tipper" not in badges:
         badges.append("generous_tipper")
         new_badges.append("generous_tipper")
@@ -699,6 +703,18 @@ async def check_and_award_badges(user_id: str, user_data: dict):
         badges.append("big_tipper")
         new_badges.append("big_tipper")
         bonus_points += BADGES["big_tipper"]["points_reward"]
+    
+    # Tipper badges (Bartender)
+    bartender_tips = stats.get("bartender_tips", 0)
+    if bartender_tips >= 1 and "benevolent_tipper" not in badges:
+        badges.append("benevolent_tipper")
+        new_badges.append("benevolent_tipper")
+        bonus_points += BADGES["benevolent_tipper"]["points_reward"]
+    
+    if bartender_tips >= 5 and "huge_tipper" not in badges:
+        badges.append("huge_tipper")
+        new_badges.append("huge_tipper")
+        bonus_points += BADGES["huge_tipper"]["points_reward"]
     
     # Update user badges and add bonus points
     if new_badges:
@@ -746,6 +762,8 @@ async def award_points_action(data: AwardPointsRequest, admin: dict = Depends(ge
         update_ops["$inc"]["action_stats.friends_brought"] = 1
     elif data.action_id == "tip_kj":
         update_ops["$inc"]["action_stats.tips"] = 1
+    elif data.action_id == "tip_bartender":
+        update_ops["$inc"]["action_stats.bartender_tips"] = 1
     elif data.action_id in ["three_nights", "five_nights"]:
         update_ops["$set"] = {"consecutive_visits": 3 if data.action_id == "three_nights" else 5}
     elif data.action_id == "follow_tiktok":

@@ -15,6 +15,7 @@ A full-stack web app for King Karaoke featuring:
 - **Theme**: Royal purple (#0F0518) and gold (#FFD700) color scheme
 - **Authentication**: JWT-based email/password
 - **Admin Access**: Role-based (integrated with main app)
+- **Title Preference**: Users can choose male (Squire/Knight/Count/Duke/Prince) or female (Lady/Dame/Countess/Duchess/Princess) rank titles
 
 ## User Personas
 1. **Karaoke Patron**: Fun-loving singer who wants to track progress and earn rewards
@@ -31,15 +32,22 @@ A full-stack web app for King Karaoke featuring:
 | Leaderboard | ✅ Complete | P0 |
 | Badges/Accomplishments | ✅ Complete | P1 |
 | Admin Panel | ✅ Complete | P1 |
+| Title Preference (Male/Female ranks) | ✅ Complete | P1 |
 
 ## What's Been Implemented (December 2025)
 
 ### Backend (FastAPI + MongoDB)
 - User authentication (register, login, JWT tokens)
-- Rank system (Peasant → Squire → Knight → Count → Duke → Prince)
+- Rank system with male/female title options:
+  - Peasant (both)
+  - Squire / Lady
+  - Knight / Dame
+  - Count / Countess
+  - Duke / Duchess
+  - Prince / Princess
 - Song queue management (add, remove, position tracking)
-- Points & badges system with automatic badge unlocking
-- Leaderboard API
+- Points & badges system with automatic badge unlocking (23 badges across 6 categories)
+- Leaderboard API with title preference support
 - Admin endpoints (queue management, user management, points adjustment)
 - **QR Code Check-in System** - Daily venue check-ins with rotating QR codes
 - **Battle/Challenge System** - 5 challenge types (Royal Duel, Blind Challenge, Rank Battle, Song Roulette, Harmony Duel)
