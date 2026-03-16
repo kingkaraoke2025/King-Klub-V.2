@@ -182,10 +182,13 @@ BADGES = {
     "influencer": {"name": "Influencer", "description": "Posted to TikTok", "icon": "video", "points_reward": 200, "category": "social"},
     "super_fan": {"name": "Super Fan", "description": "Followed on TikTok & Facebook", "icon": "thumbs-up", "points_reward": 20, "category": "social"},
     
-    # Loyalty badges
+    # Loyalty badges - Consecutive visits
     "night_owl": {"name": "Night Owl", "description": "Visited 3 consecutive nights", "icon": "moon", "points_reward": 25, "category": "loyalty"},
     "dedicated_fan": {"name": "Dedicated Fan", "description": "Visited 5 consecutive nights", "icon": "flame", "points_reward": 50, "category": "loyalty"},
     "loyal_patron": {"name": "Loyal Patron", "description": "Visited 10 consecutive nights", "icon": "award", "points_reward": 100, "category": "loyalty"},
+    # Loyalty badges - Total nights attended
+    "tavern_regular": {"name": "Tavern Regular", "description": "Attended karaoke on 3 different nights", "icon": "calendar", "points_reward": 10, "category": "loyalty"},
+    "crown_loyalist": {"name": "Crown Loyalist", "description": "Attended karaoke on 5 different nights", "icon": "crown", "points_reward": 25, "category": "loyalty"},
     
     # Generosity - KJ tips
     "generous_tipper": {"name": "Generous Tipper", "description": "Tipped the KJ", "icon": "coins", "points_reward": 10, "category": "generosity"},
@@ -1378,6 +1381,19 @@ async def perform_checkin(venue_code: str, user: dict = Depends(get_current_user
         user_badges.append("loyal_patron")
         badges_earned.append("loyal_patron")
         bonus_points += BADGES["loyal_patron"]["points_reward"]
+    
+    # Count total unique nights attended for Tavern Regular and Crown Loyalist badges
+    total_nights = await db.checkins.count_documents({"user_id": user["id"]})
+    
+    if total_nights >= 3 and "tavern_regular" not in user_badges:
+        user_badges.append("tavern_regular")
+        badges_earned.append("tavern_regular")
+        bonus_points += BADGES["tavern_regular"]["points_reward"]
+    
+    if total_nights >= 5 and "crown_loyalist" not in user_badges:
+        user_badges.append("crown_loyalist")
+        badges_earned.append("crown_loyalist")
+        bonus_points += BADGES["crown_loyalist"]["points_reward"]
     
     if badges_earned:
         await db.users.update_one(
