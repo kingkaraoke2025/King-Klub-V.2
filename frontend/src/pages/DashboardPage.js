@@ -3,16 +3,18 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   Crown, Mic2, Trophy, Award, Star, TrendingUp, 
-  Calendar, Music, ChevronRight, Sparkles 
+  Calendar, Music, ChevronRight, Sparkles, Share2, Copy, Check, Users
 } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/context/AuthContext';
 import { Progress } from '@/components/ui/progress';
 import { getRankName } from '@/utils/rankUtils';
+import { toast } from 'sonner';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+const FRONTEND_URL = window.location.origin;
 
 const rankIcons = {
   shield: Crown,
@@ -27,17 +29,21 @@ const DashboardPage = () => {
   const { user, refreshUser } = useAuth();
   const [stats, setStats] = useState(null);
   const [recentAccomplishments, setRecentAccomplishments] = useState([]);
+  const [referralStats, setReferralStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, accompRes] = await Promise.all([
+        const [statsRes, accompRes, referralRes] = await Promise.all([
           axios.get(`${API}/stats`),
-          axios.get(`${API}/accomplishments`)
+          axios.get(`${API}/accomplishments`),
+          axios.get(`${API}/auth/referral-stats`)
         ]);
         setStats(statsRes.data);
         setRecentAccomplishments(accompRes.data.slice(0, 3));
+        setReferralStats(referralRes.data);
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
       } finally {
@@ -58,6 +64,37 @@ const DashboardPage = () => {
   const currentRankName = getRankName(user?.rank, user?.title_preference);
   const nextRankName = getRankName(user?.next_rank, user?.title_preference);
   const isMaxRank = currentRankName === 'Prince' || currentRankName === 'Princess';
+
+  const referralLink = referralStats ? `${FRONTEND_URL}/register?ref=${referralStats.referral_code}` : '';
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(referralLink);
+      setCopied(true);
+      toast.success('Referral link copied!');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast.error('Failed to copy link');
+    }
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Join me at King Karaoke!',
+          text: `Join King Klub and start your karaoke journey! Sign up with my link to get started.`,
+          url: referralLink,
+        });
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          handleCopyLink(); // Fallback to copy
+        }
+      }
+    } else {
+      handleCopyLink(); // Fallback to copy
+    }
+  };
 
   if (loading) {
     return (
@@ -238,6 +275,73 @@ const DashboardPage = () => {
             </Link>
           </motion.div>
         </div>
+
+        {/* Referral Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.55 }}
+          className="glass-card p-6"
+          data-testid="referral-section"
+        >
+          <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-3 bg-gradient-to-br from-pink-500/20 to-purple-500/20 rounded-xl">
+                  <Users className="w-6 h-6 text-pink-400" />
+                </div>
+                <div>
+                  <h3 className="font-cinzel font-bold text-xl text-white">Invite Friends</h3>
+                  <p className="text-white/60 text-sm">Earn badges when friends join!</p>
+                </div>
+              </div>
+              
+              {referralStats && (
+                <div className="flex items-center gap-4 mt-4">
+                  <div className="text-center px-4 py-2 bg-white/5 rounded-lg">
+                    <p className="text-2xl font-bold text-gold">{referralStats.total_referrals}</p>
+                    <p className="text-white/50 text-xs">Friends Invited</p>
+                  </div>
+                  {referralStats.next_badge && (
+                    <div className="text-center px-4 py-2 bg-white/5 rounded-lg">
+                      <p className="text-lg font-bold text-purple-400">{referralStats.referrals_to_next}</p>
+                      <p className="text-white/50 text-xs">to {referralStats.next_badge}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            <div className="flex-1 space-y-3">
+              <div className="relative">
+                <input
+                  type="text"
+                  readOnly
+                  value={referralLink}
+                  className="w-full royal-input pr-24 text-sm text-white/70"
+                  data-testid="referral-link-input"
+                />
+                <button
+                  onClick={handleCopyLink}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-white text-sm flex items-center gap-1 transition-colors"
+                  data-testid="copy-referral-btn"
+                >
+                  {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+              
+              <button
+                onClick={handleShare}
+                className="w-full py-3 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 rounded-lg text-white font-medium flex items-center justify-center gap-2 transition-all"
+                data-testid="share-referral-btn"
+              >
+                <Share2 className="w-5 h-5" />
+                Share Your Referral Link
+              </button>
+            </div>
+          </div>
+        </motion.div>
 
         {/* Recent Accomplishments */}
         {recentAccomplishments.length > 0 && (
