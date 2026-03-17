@@ -327,18 +327,18 @@ const AdminPage = () => {
                   <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
                   <span className="text-sm font-medium text-green-400 uppercase tracking-wider">Now Performing</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-gold/10 rounded-xl">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className="p-3 bg-gold/10 rounded-xl shrink-0">
                       <Mic2 className="w-6 h-6 text-gold" />
                     </div>
-                    <div>
-                      <h3 className="font-cinzel font-bold text-xl text-white">{currentSong.user_name}</h3>
-                      <p className="text-gold">{currentSong.song_title} - {currentSong.artist}</p>
+                    <div className="min-w-0 overflow-hidden">
+                      <h3 className="font-cinzel font-bold text-xl text-white truncate">{currentSong.user_name}</h3>
+                      <p className="text-gold truncate">{currentSong.song_title} - {currentSong.artist}</p>
                       {currentSong.message_to_admin && (
-                        <div className="mt-2 p-2 bg-purple-500/10 border border-purple-500/30 rounded-lg max-w-md">
+                        <div className="mt-2 p-2 bg-purple-500/10 border border-purple-500/30 rounded-lg max-w-full overflow-hidden">
                           <p className="text-purple-300 text-xs font-medium mb-1">Message:</p>
-                          <p className="text-white/80 text-sm">{currentSong.message_to_admin}</p>
+                          <p className="text-white/80 text-sm break-words whitespace-pre-wrap">{currentSong.message_to_admin}</p>
                         </div>
                       )}
                     </div>
@@ -346,7 +346,7 @@ const AdminPage = () => {
                   <Button
                     onClick={() => handleCompleteSong(currentSong.id)}
                     data-testid="complete-song-btn"
-                    className="btn-gold"
+                    className="btn-gold shrink-0"
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
                     Complete
@@ -380,13 +380,13 @@ const AdminPage = () => {
                         <div className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center">
                           <span className="font-cinzel font-bold text-gold">{item.position}</span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-white">{item.user_name}</h3>
+                        <div className="flex-1 min-w-0 overflow-hidden">
+                          <h3 className="font-medium text-white truncate">{item.user_name}</h3>
                           <p className="text-gold text-sm truncate">{item.song_title} - {item.artist}</p>
                           {item.message_to_admin && (
-                            <div className="mt-2 p-2 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                            <div className="mt-2 p-2 bg-purple-500/10 border border-purple-500/30 rounded-lg max-w-full overflow-hidden">
                               <p className="text-purple-300 text-xs font-medium mb-1">Message from singer:</p>
-                              <p className="text-white/80 text-sm">{item.message_to_admin}</p>
+                              <p className="text-white/80 text-sm break-words whitespace-pre-wrap">{item.message_to_admin}</p>
                             </div>
                           )}
                         </div>
