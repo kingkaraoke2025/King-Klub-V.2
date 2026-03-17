@@ -66,6 +66,22 @@ RANKS = [
     {"name": "Prince", "name_female": "Princess", "min_points": 2500, "icon": "sparkles"},
 ]
 
+# ==================== RANK PERKS ====================
+# Queue position perks based on rank
+RANK_PERKS = {
+    "Peasant": None,  # No perk
+    "Squire": {"type": "jump_ahead", "value": 3, "description": "Jump ahead 3 spots in queue"},
+    "Lady": {"type": "jump_ahead", "value": 3, "description": "Jump ahead 3 spots in queue"},
+    "Knight": {"type": "jump_ahead", "value": 5, "description": "Jump ahead 5 spots in queue"},
+    "Dame": {"type": "jump_ahead", "value": 5, "description": "Jump ahead 5 spots in queue"},
+    "Count": {"type": "jump_to", "value": 5, "description": "Jump to 5th spot in queue"},
+    "Countess": {"type": "jump_to", "value": 5, "description": "Jump to 5th spot in queue"},
+    "Duke": {"type": "jump_to", "value": 2, "description": "Jump to 2nd spot in queue"},
+    "Duchess": {"type": "jump_to", "value": 2, "description": "Jump to 2nd spot in queue"},
+    "Prince": {"type": "jump_to", "value": 1, "description": "Jump to 1st spot in queue"},
+    "Princess": {"type": "jump_to", "value": 1, "description": "Jump to 1st spot in queue"},
+}
+
 def get_rank(points: int) -> dict:
     current_rank = RANKS[0]
     for rank in RANKS:
@@ -538,6 +554,215 @@ async def remove_from_queue(item_id: str, user: dict = Depends(get_current_user)
         )
     
     return {"message": "Removed from queue"}
+
+
+# ==================== RANK PERK SYSTEM ====================
+def get_user_rank_name(user: dict) -> str:
+    """Get the user's rank name based on their points and title preference"""
+    rank = get_rank(user["points"])
+    if user.get("title_preference") == "female" and rank.get("name_female"):
+        return rank["name_female"]
+    return rank["name"]
+
+@api_router.get("/queue/perk-status")
+async def get_perk_status(user: dict = Depends(get_current_user)):
+    """Check if user can use their rank perk tonight"""
+    rank_name = get_user_rank_name(user)
+    perk = RANK_PERKS.get(rank_name)
+    
+    if not perk:
+        return {
+            "has_perk": False,
+            "rank": rank_name,
+            "perk": None,
+            "can_use": False,
+            "reason": "Peasants don't have queue perks. Earn 500 points to unlock!"
+        }
+    
+    # Check if user has checked in today
+    from zoneinfo import ZoneInfo
+    tz = ZoneInfo(VENUE_TIMEZONE)
+    now = datetime.now(tz)
+    
+    # Use same date logic as QR code (4 AM cutoff)
+    if now.hour < QR_CODE_CUTOFF_HOUR:
+        effective_date = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+    else:
+        effective_date = now.strftime("%Y-%m-%d")
+    
+    checkin_today = await db.checkins.find_one({
+        "user_id": user["id"],
+        "date": effective_date
+    })
+    
+    if not checkin_today:
+        return {
+            "has_perk": True,
+            "rank": rank_name,
+            "perk": perk,
+            "can_use": False,
+            "reason": "You must check in with the QR code first to use your perk tonight"
+        }
+    
+    # Check if perk already used today
+    perk_used = await db.perk_usage.find_one({
+        "user_id": user["id"],
+        "date": effective_date
+    })
+    
+    if perk_used:
+        return {
+            "has_perk": True,
+            "rank": rank_name,
+            "perk": perk,
+            "can_use": False,
+            "reason": "You've already used your perk tonight. Come back tomorrow!"
+        }
+    
+    # Check if user has a song in queue
+    queue_item = await db.queue.find_one({
+        "user_id": user["id"],
+        "status": "pending"
+    })
+    
+    if not queue_item:
+        return {
+            "has_perk": True,
+            "rank": rank_name,
+            "perk": perk,
+            "can_use": False,
+            "reason": "Add a song to the queue first, then use your perk!"
+        }
+    
+    return {
+        "has_perk": True,
+        "rank": rank_name,
+        "perk": perk,
+        "can_use": True,
+        "queue_position": queue_item["position"],
+        "song": f"{queue_item['song_title']} - {queue_item['artist']}"
+    }
+
+@api_router.post("/queue/use-perk")
+async def use_rank_perk(user: dict = Depends(get_current_user)):
+    """Use the rank perk to move up in the queue"""
+    rank_name = get_user_rank_name(user)
+    perk = RANK_PERKS.get(rank_name)
+    
+    if not perk:
+        raise HTTPException(status_code=400, detail="Your rank doesn't have a queue perk")
+    
+    # Check if user has checked in today
+    from zoneinfo import ZoneInfo
+    tz = ZoneInfo(VENUE_TIMEZONE)
+    now = datetime.now(tz)
+    
+    if now.hour < QR_CODE_CUTOFF_HOUR:
+        effective_date = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+    else:
+        effective_date = now.strftime("%Y-%m-%d")
+    
+    checkin_today = await db.checkins.find_one({
+        "user_id": user["id"],
+        "date": effective_date
+    })
+    
+    if not checkin_today:
+        raise HTTPException(status_code=400, detail="You must check in with the QR code first")
+    
+    # Check if perk already used
+    perk_used = await db.perk_usage.find_one({
+        "user_id": user["id"],
+        "date": effective_date
+    })
+    
+    if perk_used:
+        raise HTTPException(status_code=400, detail="You've already used your perk tonight")
+    
+    # Get user's queue item
+    queue_item = await db.queue.find_one({
+        "user_id": user["id"],
+        "status": "pending"
+    }, {"_id": 0})
+    
+    if not queue_item:
+        raise HTTPException(status_code=400, detail="You don't have a song in the queue")
+    
+    old_position = queue_item["position"]
+    
+    # Calculate new position based on perk type
+    if perk["type"] == "jump_ahead":
+        new_position = max(1, old_position - perk["value"])
+    else:  # jump_to
+        new_position = perk["value"]
+    
+    # Don't move if already at or ahead of target
+    if old_position <= new_position:
+        raise HTTPException(status_code=400, detail=f"You're already at position {old_position}, no need to use perk!")
+    
+    # Move other items down to make room
+    items_to_shift = await db.queue.find({
+        "status": "pending",
+        "position": {"$gte": new_position, "$lt": old_position}
+    }).to_list(100)
+    
+    for item in items_to_shift:
+        await db.queue.update_one(
+            {"id": item["id"]},
+            {"$set": {"position": item["position"] + 1, "estimated_wait": item["position"] * 4}}
+        )
+    
+    # Move user's item to new position
+    await db.queue.update_one(
+        {"id": queue_item["id"]},
+        {"$set": {"position": new_position, "estimated_wait": (new_position - 1) * 4}}
+    )
+    
+    # Record perk usage
+    await db.perk_usage.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "date": effective_date,
+        "rank": rank_name,
+        "perk_type": perk["type"],
+        "old_position": old_position,
+        "new_position": new_position,
+        "used_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    # Notify admin via WebSocket
+    await broadcast_message({
+        "type": "PERK_USED",
+        "user_name": user["display_name"],
+        "rank": rank_name,
+        "perk_description": perk["description"],
+        "song": f"{queue_item['song_title']} - {queue_item['artist']}",
+        "old_position": old_position,
+        "new_position": new_position
+    })
+    
+    # Also store notification for admin panel
+    await db.admin_notifications.insert_one({
+        "id": str(uuid.uuid4()),
+        "type": "perk_used",
+        "message": f"{user['display_name']} ({rank_name}) used their perk: moved from #{old_position} to #{new_position}",
+        "user_id": user["id"],
+        "user_name": user["display_name"],
+        "rank": rank_name,
+        "song": f"{queue_item['song_title']} - {queue_item['artist']}",
+        "old_position": old_position,
+        "new_position": new_position,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "read": False
+    })
+    
+    return {
+        "message": f"Perk activated! Moved from #{old_position} to #{new_position}",
+        "old_position": old_position,
+        "new_position": new_position,
+        "perk_used": perk["description"]
+    }
+
 
 # ==================== ADMIN QUEUE MANAGEMENT ====================
 @api_router.post("/admin/queue/{item_id}/complete")

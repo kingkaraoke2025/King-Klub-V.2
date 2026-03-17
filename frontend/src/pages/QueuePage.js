@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic2, Clock, Plus, X, Music, User, Loader2, MessageSquare } from 'lucide-react';
+import { Mic2, Clock, Plus, X, Music, User, Loader2, MessageSquare, Zap, Crown, Sparkles } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import axios from 'axios';
 
@@ -17,6 +17,9 @@ const QueuePage = () => {
   const [loading, setLoading] = useState(true);
   const [addingToQueue, setAddingToQueue] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [perkDialogOpen, setPerkDialogOpen] = useState(false);
+  const [perkStatus, setPerkStatus] = useState(null);
+  const [usingPerk, setUsingPerk] = useState(false);
   const [songTitle, setSongTitle] = useState('');
   const [artist, setArtist] = useState('');
   const [messageToAdmin, setMessageToAdmin] = useState('');
@@ -32,10 +35,23 @@ const QueuePage = () => {
     }
   };
 
+  const fetchPerkStatus = async () => {
+    try {
+      const response = await axios.get(`${API}/queue/perk-status`);
+      setPerkStatus(response.data);
+    } catch (error) {
+      console.error('Failed to fetch perk status:', error);
+    }
+  };
+
   useEffect(() => {
     fetchQueue();
+    fetchPerkStatus();
     // Poll for updates every 10 seconds
-    const interval = setInterval(fetchQueue, 10000);
+    const interval = setInterval(() => {
+      fetchQueue();
+      fetchPerkStatus();
+    }, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -59,6 +75,7 @@ const QueuePage = () => {
       setMessageToAdmin('');
       setDialogOpen(false);
       fetchQueue();
+      fetchPerkStatus();
     } catch (error) {
       const message = error.response?.data?.detail || 'Failed to add to queue';
       toast.error(message);
@@ -67,11 +84,27 @@ const QueuePage = () => {
     }
   };
 
+  const handleUsePerk = async () => {
+    setUsingPerk(true);
+    try {
+      const response = await axios.post(`${API}/queue/use-perk`);
+      toast.success(response.data.message);
+      setPerkDialogOpen(false);
+      fetchQueue();
+      fetchPerkStatus();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to use perk');
+    } finally {
+      setUsingPerk(false);
+    }
+  };
+
   const handleRemoveFromQueue = async (itemId) => {
     try {
       await axios.delete(`${API}/queue/${itemId}`);
       toast.success('Removed from queue');
       fetchQueue();
+      fetchPerkStatus();
     } catch (error) {
       toast.error('Failed to remove from queue');
     }
@@ -108,17 +141,95 @@ const QueuePage = () => {
             </p>
           </div>
 
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button
-                disabled={!!userInQueue}
-                data-testid="add-to-queue-btn"
-                className="btn-gold"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                {userInQueue ? 'Already in Queue' : 'Join Queue'}
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-3">
+            {/* Rank Perk Button */}
+            {perkStatus?.has_perk && (
+              <Dialog open={perkDialogOpen} onOpenChange={setPerkDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={`border-purple-500/50 ${perkStatus.can_use ? 'text-purple-400 hover:bg-purple-500/20 animate-pulse' : 'text-white/40'}`}
+                    data-testid="use-perk-btn"
+                  >
+                    <Zap className="w-5 h-5 mr-2" />
+                    Use Perk
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-purple-deep border-purple-500/30 text-white">
+                  <DialogHeader>
+                    <DialogTitle className="font-cinzel text-2xl text-purple-400 flex items-center gap-2">
+                      <Crown className="w-6 h-6" />
+                      {perkStatus.rank} Perk
+                    </DialogTitle>
+                    <DialogDescription className="text-white/60">
+                      {perkStatus.perk?.description}
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="py-4 space-y-4">
+                    {perkStatus.can_use ? (
+                      <>
+                        <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+                          <p className="text-white/80 text-sm mb-2">Your current position:</p>
+                          <p className="text-2xl font-bold text-gold">#{perkStatus.queue_position}</p>
+                          <p className="text-white/60 text-sm mt-1">{perkStatus.song}</p>
+                        </div>
+                        <div className="text-center">
+                          <Sparkles className="w-8 h-8 text-purple-400 mx-auto mb-2" />
+                          <p className="text-white/80">
+                            {perkStatus.perk?.type === 'jump_ahead' 
+                              ? `Move ahead ${perkStatus.perk?.value} spots!`
+                              : `Jump to position #${perkStatus.perk?.value}!`
+                            }
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="bg-white/5 rounded-lg p-4 text-center">
+                        <p className="text-white/60">{perkStatus.reason}</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => setPerkDialogOpen(false)}
+                      className="border-white/20 text-white hover:bg-white/10"
+                    >
+                      Cancel
+                    </Button>
+                    {perkStatus.can_use && (
+                      <Button
+                        onClick={handleUsePerk}
+                        disabled={usingPerk}
+                        className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                        data-testid="confirm-perk-btn"
+                      >
+                        {usingPerk ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Zap className="w-4 h-4 mr-2" />
+                        )}
+                        Activate Perk!
+                      </Button>
+                    )}
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  disabled={!!userInQueue}
+                  data-testid="add-to-queue-btn"
+                  className="btn-gold"
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  {userInQueue ? 'Already in Queue' : 'Join Queue'}
+                </Button>
+              </DialogTrigger>
             <DialogContent className="bg-royal-paper border-white/10 text-white">
               <DialogHeader>
                 <DialogTitle className="font-cinzel text-2xl text-gold">Add Your Song</DialogTitle>
@@ -192,6 +303,7 @@ const QueuePage = () => {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </motion.div>
 
         {/* Currently Performing */}

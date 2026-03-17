@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
+import { toast } from 'sonner';
 
-const useVoteNotification = (setVoteChallenge, onVotingClosed) => {
+const useVoteNotification = (setVoteChallenge, onVotingClosed, isAdmin = false) => {
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
 
@@ -36,6 +37,15 @@ const useVoteNotification = (setVoteChallenge, onVotingClosed) => {
               onVotingClosed(data.challengeId);
             }
             setVoteChallenge(null);
+          } else if (data.type === 'PERK_USED') {
+            // Show notification for perk usage (especially useful for admins)
+            toast.info(
+              `🎤 ${data.user_name} (${data.rank}) used their perk!`,
+              {
+                description: `Moved from #${data.old_position} to #${data.new_position} - ${data.song}`,
+                duration: 8000,
+              }
+            );
           }
         } catch (e) {
           // Ignore non-JSON messages (like pong)
