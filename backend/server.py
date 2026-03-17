@@ -1495,25 +1495,34 @@ async def close_voting(challenge_id: str, admin: dict = Depends(get_admin_user))
 
 # ==================== QR CODE CHECK-IN ====================
 import hashlib
+from zoneinfo import ZoneInfo
+
 VENUE_SECRET = os.environ.get('VENUE_SECRET', 'king-karaoke-2024')
+VENUE_TIMEZONE = os.environ.get('VENUE_TIMEZONE', 'America/Chicago')  # Central Time for King Karaoke
 CHECKIN_POINTS = 50
+
+def get_venue_date():
+    """Get current date in venue's local timezone"""
+    tz = ZoneInfo(VENUE_TIMEZONE)
+    return datetime.now(tz).strftime("%Y-%m-%d")
 
 @api_router.get("/venue/qr-data")
 async def get_venue_qr_data(admin: dict = Depends(get_admin_user)):
     """Get QR code data for venue check-in (admin only)"""
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = get_venue_date()
     daily_code = hashlib.sha256(f"{VENUE_SECRET}-{today}".encode()).hexdigest()[:12]
     
     return {
         "venue_code": daily_code,
         "date": today,
+        "timezone": VENUE_TIMEZONE,
         "checkin_url": f"/checkin/{daily_code}"
     }
 
 @api_router.post("/checkin/{venue_code}")
 async def perform_checkin(venue_code: str, user: dict = Depends(get_current_user)):
     """Perform a venue check-in via QR code"""
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = get_venue_date()
     expected_code = hashlib.sha256(f"{VENUE_SECRET}-{today}".encode()).hexdigest()[:12]
     
     if venue_code != expected_code:
@@ -1541,7 +1550,9 @@ async def perform_checkin(venue_code: str, user: dict = Depends(get_current_user
     }
     await db.checkins.insert_one(checkin)
     
-    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+    # Calculate yesterday in venue timezone
+    tz = ZoneInfo(VENUE_TIMEZONE)
+    yesterday = (datetime.now(tz) - timedelta(days=1)).strftime("%Y-%m-%d")
     yesterday_checkin = await db.checkins.find_one({
         "user_id": user["id"],
         "date": yesterday
