@@ -3,13 +3,13 @@ import { motion } from 'framer-motion';
 import { 
   Shield, Users, Mic2, CheckCircle, XCircle, Play, 
   Plus, Minus, Crown, RefreshCw, UserCheck, Star, Gift, Search,
-  Swords, Vote, Trophy, Trash2
+  Swords, Vote, Trophy, Trash2, AlertTriangle
 } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import axios from 'axios';
 
@@ -28,6 +28,8 @@ const AdminPage = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [awardDialogOpen, setAwardDialogOpen] = useState(false);
   const [userSearch, setUserSearch] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
 
   const fetchData = async () => {
     try {
@@ -141,14 +143,19 @@ const AdminPage = () => {
     setAwardDialogOpen(true);
   };
 
-  const handleDeleteUser = async (userId, displayName) => {
-    if (!window.confirm(`Are you sure you want to delete "${displayName}"? This action cannot be undone and will remove all their data.`)) {
-      return;
-    }
+  const openDeleteDialog = (u) => {
+    setUserToDelete(u);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
     
     try {
-      const response = await axios.delete(`${API}/admin/users/${userId}`);
+      const response = await axios.delete(`${API}/admin/users/${userToDelete.id}`);
       toast.success(response.data.message);
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to delete user');
@@ -480,7 +487,7 @@ const AdminPage = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleDeleteUser(u.id, u.display_name)}
+                          onClick={() => openDeleteDialog(u)}
                           data-testid={`delete-user-${u.id}`}
                           className="h-8 w-8 p-0 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
                           title="Delete user"
@@ -705,6 +712,57 @@ const AdminPage = () => {
               </button>
             ))}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="bg-purple-deep border-white/10 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-cinzel text-xl text-red-400 flex items-center gap-2">
+              <AlertTriangle className="w-6 h-6" />
+              Delete User
+            </DialogTitle>
+            <DialogDescription className="text-white/70">
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {userToDelete && (
+            <div className="py-4">
+              <p className="text-white mb-2">
+                Are you sure you want to delete <span className="font-bold text-gold">{userToDelete.display_name}</span>?
+              </p>
+              <p className="text-white/50 text-sm">
+                This will permanently remove:
+              </p>
+              <ul className="text-white/50 text-sm list-disc list-inside mt-2">
+                <li>Their account and profile</li>
+                <li>All queue entries</li>
+                <li>Check-in history</li>
+                <li>Badges and accomplishments</li>
+                <li>Battle history</li>
+              </ul>
+            </div>
+          )}
+          
+          <DialogFooter className="gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              className="border-white/20 text-white hover:bg-white/10"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteUser}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              data-testid="confirm-delete-btn"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete User
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Layout>
