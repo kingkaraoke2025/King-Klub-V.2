@@ -121,6 +121,7 @@ class SongQueueItem(BaseModel):
     user_name: str
     song_title: str
     artist: str
+    message_to_admin: Optional[str] = None  # Message to admin (max 250 chars)
     status: str  # pending, current, completed, cancelled
     position: int
     estimated_wait: int
@@ -129,6 +130,7 @@ class SongQueueItem(BaseModel):
 class AddSongRequest(BaseModel):
     song_title: str
     artist: str
+    message_to_admin: Optional[str] = None  # Message to admin (max 250 chars)
 
 class Badge(BaseModel):
     id: str
@@ -482,6 +484,11 @@ async def add_to_queue(data: AddSongRequest, user: dict = Depends(get_current_us
     if existing:
         raise HTTPException(status_code=400, detail="You already have a song in queue")
     
+    # Validate message length
+    message = data.message_to_admin
+    if message and len(message) > 250:
+        message = message[:250]  # Truncate to 250 chars
+    
     # Get current max position
     last_item = await db.queue.find_one(
         {"status": {"$in": ["pending", "current"]}},
@@ -495,6 +502,7 @@ async def add_to_queue(data: AddSongRequest, user: dict = Depends(get_current_us
         "user_name": user["display_name"],
         "song_title": data.song_title,
         "artist": data.artist,
+        "message_to_admin": message,
         "status": "pending",
         "position": position,
         "estimated_wait": (position - 1) * 4,  # ~4 minutes per song

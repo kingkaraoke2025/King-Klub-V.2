@@ -314,6 +314,12 @@ const AdminPage = () => {
                     <div>
                       <h3 className="font-cinzel font-bold text-xl text-white">{currentSong.user_name}</h3>
                       <p className="text-gold">{currentSong.song_title} - {currentSong.artist}</p>
+                      {currentSong.message_to_admin && (
+                        <div className="mt-2 p-2 bg-purple-500/10 border border-purple-500/30 rounded-lg max-w-md">
+                          <p className="text-purple-300 text-xs font-medium mb-1">Message:</p>
+                          <p className="text-white/80 text-sm">{currentSong.message_to_admin}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <Button
@@ -356,6 +362,12 @@ const AdminPage = () => {
                         <div className="flex-1 min-w-0">
                           <h3 className="font-medium text-white">{item.user_name}</h3>
                           <p className="text-gold text-sm truncate">{item.song_title} - {item.artist}</p>
+                          {item.message_to_admin && (
+                            <div className="mt-2 p-2 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                              <p className="text-purple-300 text-xs font-medium mb-1">Message from singer:</p>
+                              <p className="text-white/80 text-sm">{item.message_to_admin}</p>
+                            </div>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <Button

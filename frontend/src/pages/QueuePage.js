@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic2, Clock, Plus, X, Music, User, Loader2 } from 'lucide-react';
+import { Mic2, Clock, Plus, X, Music, User, Loader2, MessageSquare } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ const QueuePage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [songTitle, setSongTitle] = useState('');
   const [artist, setArtist] = useState('');
+  const [messageToAdmin, setMessageToAdmin] = useState('');
 
   const fetchQueue = async () => {
     try {
@@ -49,11 +50,13 @@ const QueuePage = () => {
     try {
       await axios.post(`${API}/queue`, {
         song_title: songTitle,
-        artist: artist
+        artist: artist,
+        message_to_admin: messageToAdmin.trim() || null
       });
       toast.success('Added to queue! Get ready to shine!');
       setSongTitle('');
       setArtist('');
+      setMessageToAdmin('');
       setDialogOpen(false);
       fetchQueue();
     } catch (error) {
@@ -147,6 +150,25 @@ const QueuePage = () => {
                       data-testid="artist-input"
                       className="w-full royal-input pl-12"
                     />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white/80 mb-2">
+                    <MessageSquare className="inline w-4 h-4 mr-1" />
+                    Message to KJ <span className="text-white/40">(optional)</span>
+                  </label>
+                  <div className="relative">
+                    <textarea
+                      value={messageToAdmin}
+                      onChange={(e) => setMessageToAdmin(e.target.value.slice(0, 250))}
+                      placeholder="Special requests, dedications, or notes for the KJ..."
+                      data-testid="message-to-admin-input"
+                      rows={3}
+                      className="w-full royal-input resize-none"
+                    />
+                    <span className={`absolute bottom-2 right-3 text-xs ${messageToAdmin.length >= 240 ? 'text-red-400' : 'text-white/40'}`}>
+                      {messageToAdmin.length}/250
+                    </span>
                   </div>
                 </div>
                 <Button
