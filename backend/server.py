@@ -1527,7 +1527,7 @@ from zoneinfo import ZoneInfo
 
 VENUE_SECRET = os.environ.get('VENUE_SECRET', 'king-karaoke-2024')
 VENUE_TIMEZONE = os.environ.get('VENUE_TIMEZONE', 'America/Chicago')  # Central Time for King Karaoke
-CHECKIN_POINTS = 50
+CHECKIN_POINTS = 10
 QR_CODE_CUTOFF_HOUR = 4  # QR code expires at 4 AM the next day
 
 def get_venue_date():
