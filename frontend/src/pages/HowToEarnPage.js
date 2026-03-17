@@ -154,11 +154,11 @@ const HowToEarnPage = () => {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
               { name: 'Peasant', female: 'Peasant', points: 0, icon: Shield },
-              { name: 'Squire', female: 'Lady', points: 100, icon: Star },
-              { name: 'Knight', female: 'Dame', points: 300, icon: Swords },
-              { name: 'Count', female: 'Countess', points: 600, icon: Crown },
-              { name: 'Duke', female: 'Duchess', points: 1000, icon: Sparkles },
-              { name: 'Prince', female: 'Princess', points: 2000, icon: Crown },
+              { name: 'Squire', female: 'Lady', points: 500, icon: Star },
+              { name: 'Knight', female: 'Dame', points: 1000, icon: Swords },
+              { name: 'Count', female: 'Countess', points: 1500, icon: Crown },
+              { name: 'Duke', female: 'Duchess', points: 2000, icon: Sparkles },
+              { name: 'Prince', female: 'Princess', points: 2500, icon: Crown },
             ].map((rank, idx) => {
               const Icon = rank.icon;
               return (
