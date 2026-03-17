@@ -172,13 +172,13 @@ const AdminPage = () => {
     }
   };
 
-  const handleCancelBattle = async (challengeId) => {
+  const handleCancelBattle = async (challengeId, winnerId) => {
     try {
-      const response = await axios.post(`${API}/challenges/${challengeId}/cancel`);
+      const response = await axios.post(`${API}/challenges/${challengeId}/cancel?winner_id=${winnerId}`);
       toast.success(response.data.message);
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to cancel battle');
+      toast.error(error.response?.data?.detail || 'Failed to decide winner');
     }
   };
 
@@ -572,43 +572,62 @@ const AdminPage = () => {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex gap-3 flex-wrap">
-                      {!battle.voting_open ? (
+                    <div className="flex flex-col gap-3">
+                      <div className="flex gap-3">
+                        {!battle.voting_open ? (
+                          <Button
+                            onClick={() => handleOpenVoting(battle.id)}
+                            className="flex-1 bg-green-600 hover:bg-green-700"
+                            data-testid={`open-voting-${battle.id}`}
+                          >
+                            <Vote className="w-4 h-4 mr-2" />
+                            Open Voting
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => handleCloseVoting(battle.id)}
+                            className="flex-1 bg-orange-600 hover:bg-orange-700"
+                            data-testid={`close-voting-${battle.id}`}
+                          >
+                            <XCircle className="w-4 h-4 mr-2" />
+                            Close Voting
+                          </Button>
+                        )}
                         <Button
-                          onClick={() => handleOpenVoting(battle.id)}
-                          className="flex-1 bg-green-600 hover:bg-green-700"
-                          data-testid={`open-voting-${battle.id}`}
+                          onClick={() => handleFinalizeBattle(battle.id)}
+                          className="flex-1 btn-gold"
+                          disabled={!battle.vote_count || battle.vote_count === 0}
+                          data-testid={`finalize-${battle.id}`}
                         >
-                          <Vote className="w-4 h-4 mr-2" />
-                          Open Voting
+                          <Trophy className="w-4 h-4 mr-2" />
+                          Finalize (By Votes)
                         </Button>
-                      ) : (
-                        <Button
-                          onClick={() => handleCloseVoting(battle.id)}
-                          className="flex-1 bg-orange-600 hover:bg-orange-700"
-                          data-testid={`close-voting-${battle.id}`}
-                        >
-                          <XCircle className="w-4 h-4 mr-2" />
-                          Close Voting
-                        </Button>
-                      )}
-                      <Button
-                        onClick={() => handleFinalizeBattle(battle.id)}
-                        className="flex-1 btn-gold"
-                        data-testid={`finalize-${battle.id}`}
-                      >
-                        <Trophy className="w-4 h-4 mr-2" />
-                        Finalize & Award
-                      </Button>
-                      <Button
-                        onClick={() => handleCancelBattle(battle.id)}
-                        variant="outline"
-                        className="flex-1 border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                        data-testid={`cancel-battle-${battle.id}`}
-                      >
-                        <XCircle className="w-4 h-4 mr-2" />
-                        Cancel (No Votes)
-                      </Button>
+                      </div>
+                      
+                      {/* Admin Decide Winner - shown when no votes */}
+                      <div className="border-t border-white/10 pt-3">
+                        <p className="text-white/50 text-xs mb-2 text-center">Admin Pick Winner (No Votes Required)</p>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => handleCancelBattle(battle.id, battle.challenger_id)}
+                            variant="outline"
+                            className="flex-1 border-blue-500/50 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300"
+                            data-testid={`pick-challenger-${battle.id}`}
+                          >
+                            <Crown className="w-4 h-4 mr-1" />
+                            {battle.challenger?.display_name} Wins
+                          </Button>
+                          <Button
+                            onClick={() => handleCancelBattle(battle.id, battle.opponent_id)}
+                            variant="outline"
+                            className="flex-1 border-purple-500/50 text-purple-400 hover:bg-purple-500/20 hover:text-purple-300"
+                            data-testid={`pick-opponent-${battle.id}`}
+                          >
+                            <Crown className="w-4 h-4 mr-1" />
+                            {battle.opponent?.display_name} Wins
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </motion.div>
                 ))}

@@ -1249,8 +1249,8 @@ async def finalize_challenge(challenge_id: str, admin: dict = Depends(get_admin_
 
 
 @api_router.post("/challenges/{challenge_id}/cancel")
-async def cancel_challenge(challenge_id: str, admin: dict = Depends(get_admin_user)):
-    """Cancel/end a battle manually - for when no one votes (admin only)"""
+async def admin_decide_winner(challenge_id: str, winner_id: str = None, admin: dict = Depends(get_admin_user)):
+    """Admin decides the winner manually - for when no one votes (admin only)"""
     challenge = await db.challenges.find_one({"id": challenge_id}, {"_id": 0})
     if not challenge:
         raise HTTPException(status_code=404, detail="Challenge not found")
@@ -1258,45 +1258,91 @@ async def cancel_challenge(challenge_id: str, admin: dict = Depends(get_admin_us
     if challenge["status"] == "completed":
         raise HTTPException(status_code=400, detail="Challenge already completed")
     
-    if challenge["status"] == "cancelled":
-        raise HTTPException(status_code=400, detail="Challenge already cancelled")
+    if challenge["status"] != "accepted":
+        raise HTTPException(status_code=400, detail="Challenge must be accepted first")
+    
+    if not winner_id:
+        raise HTTPException(status_code=400, detail="Must specify a winner_id")
+    
+    # Validate winner is one of the participants
+    if winner_id not in [challenge["challenger_id"], challenge["opponent_id"]]:
+        raise HTTPException(status_code=400, detail="Winner must be one of the participants")
+    
+    loser_id = challenge["challenger_id"] if winner_id == challenge["opponent_id"] else challenge["opponent_id"]
     
     # Close voting if open
     if challenge.get("voting_open"):
         await broadcast_message({"type": "CLOSE_VOTING", "challenge_id": challenge_id})
     
-    # Update challenge status to cancelled
+    # Update challenge status
     await db.challenges.update_one(
         {"id": challenge_id},
-        {"$set": {"status": "cancelled", "voting_open": False, "cancelled_at": datetime.now(timezone.utc).isoformat()}}
+        {"$set": {
+            "status": "completed", 
+            "voting_open": False, 
+            "winner_id": winner_id,
+            "admin_decided": True,
+            "decided_at": datetime.now(timezone.utc).isoformat()
+        }}
     )
     
-    # Award participation points to both participants (they showed up!)
-    challenger = await db.users.find_one({"id": challenge["challenger_id"]}, {"_id": 0, "display_name": 1})
-    opponent = None
+    # Get challenge type info
+    type_info = CHALLENGE_TYPES.get(challenge["type"], {"points_winner": 50, "points_participant": 25})
     
-    participation_points = 10  # Small consolation for a cancelled battle
+    # Award points to winner
+    winner = await db.users.find_one({"id": winner_id}, {"_id": 0})
+    winner_badges = list(winner.get("badges", []))
+    winner_bonus = 0
+    new_badges = []
     
-    if challenge["status"] == "accepted" and challenge.get("opponent_id"):
-        opponent = await db.users.find_one({"id": challenge["opponent_id"]}, {"_id": 0, "display_name": 1})
-        # Award both participants
-        await db.users.update_one({"id": challenge["challenger_id"]}, {"$inc": {"points": participation_points}})
-        await db.users.update_one({"id": challenge["opponent_id"]}, {"$inc": {"points": participation_points}})
-        
-        return {
-            "message": "Battle cancelled - no winner declared",
-            "status": "cancelled",
-            "challenger": challenger["display_name"],
-            "opponent": opponent["display_name"] if opponent else None,
-            "participation_points_awarded": participation_points
+    # Battle winner badge
+    if "battle_winner" not in winner_badges:
+        winner_badges.append("battle_winner")
+        new_badges.append("battle_winner")
+        winner_bonus += BADGES["battle_winner"]["points_reward"]
+    
+    # Track wins
+    battle_wins = winner.get("battle_wins", 0) + 1
+    
+    # Duel master badge (5 wins)
+    if battle_wins >= 5 and "duel_master" not in winner_badges:
+        winner_badges.append("duel_master")
+        new_badges.append("duel_master")
+        winner_bonus += BADGES["duel_master"]["points_reward"]
+    
+    await db.users.update_one(
+        {"id": winner_id},
+        {
+            "$inc": {"points": type_info["points_winner"] + winner_bonus},
+            "$set": {"badges": winner_badges, "battle_wins": battle_wins}
         }
+    )
+    
+    # Record badges
+    for badge_id in new_badges:
+        await db.accomplishments.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": winner_id,
+            "badge_id": badge_id,
+            "badge_name": BADGES[badge_id]["name"],
+            "earned_at": datetime.now(timezone.utc).isoformat()
+        })
+    
+    # Award participation points to loser
+    await db.users.update_one(
+        {"id": loser_id},
+        {"$inc": {"points": type_info["points_participant"]}}
+    )
+    
+    winner_user = await db.users.find_one({"id": winner_id}, {"_id": 0, "display_name": 1})
     
     return {
-        "message": "Battle cancelled",
-        "status": "cancelled",
-        "challenger": challenger["display_name"],
-        "opponent": None,
-        "participation_points_awarded": 0
+        "message": f"{winner_user['display_name']} wins! (Admin decision)",
+        "winner_id": winner_id,
+        "winner_name": winner_user["display_name"],
+        "points_awarded": type_info["points_winner"],
+        "badges_earned": new_badges,
+        "admin_decided": True
     }
 
 
