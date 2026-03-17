@@ -1500,11 +1500,26 @@ from zoneinfo import ZoneInfo
 VENUE_SECRET = os.environ.get('VENUE_SECRET', 'king-karaoke-2024')
 VENUE_TIMEZONE = os.environ.get('VENUE_TIMEZONE', 'America/Chicago')  # Central Time for King Karaoke
 CHECKIN_POINTS = 50
+QR_CODE_CUTOFF_HOUR = 4  # QR code expires at 4 AM the next day
 
 def get_venue_date():
-    """Get current date in venue's local timezone"""
+    """Get current date in venue's local timezone, accounting for 4 AM cutoff.
+    
+    QR codes are valid from 4 AM until 4 AM the next day.
+    - If it's 8 PM Monday, use Monday's date (valid until 4 AM Tuesday)
+    - If it's 2 AM Tuesday, still use Monday's date (same QR code)
+    - If it's 5 AM Tuesday, use Tuesday's date (new QR code)
+    """
     tz = ZoneInfo(VENUE_TIMEZONE)
-    return datetime.now(tz).strftime("%Y-%m-%d")
+    now = datetime.now(tz)
+    
+    # If it's before 4 AM, use yesterday's date (same QR code as previous night)
+    if now.hour < QR_CODE_CUTOFF_HOUR:
+        effective_date = now - timedelta(days=1)
+    else:
+        effective_date = now
+    
+    return effective_date.strftime("%Y-%m-%d")
 
 @api_router.get("/venue/qr-data")
 async def get_venue_qr_data(admin: dict = Depends(get_admin_user)):
@@ -1512,10 +1527,23 @@ async def get_venue_qr_data(admin: dict = Depends(get_admin_user)):
     today = get_venue_date()
     daily_code = hashlib.sha256(f"{VENUE_SECRET}-{today}".encode()).hexdigest()[:12]
     
+    # Calculate when this code expires (4 AM next day in venue timezone)
+    tz = ZoneInfo(VENUE_TIMEZONE)
+    now = datetime.now(tz)
+    
+    if now.hour < QR_CODE_CUTOFF_HOUR:
+        # Already past midnight, expires at 4 AM today
+        expires_at = now.replace(hour=QR_CODE_CUTOFF_HOUR, minute=0, second=0, microsecond=0)
+    else:
+        # Expires at 4 AM tomorrow
+        tomorrow = now + timedelta(days=1)
+        expires_at = tomorrow.replace(hour=QR_CODE_CUTOFF_HOUR, minute=0, second=0, microsecond=0)
+    
     return {
         "venue_code": daily_code,
         "date": today,
         "timezone": VENUE_TIMEZONE,
+        "expires_at": expires_at.isoformat(),
         "checkin_url": f"/checkin/{daily_code}"
     }
 

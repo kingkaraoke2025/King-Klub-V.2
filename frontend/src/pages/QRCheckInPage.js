@@ -114,8 +114,14 @@ const QRCheckInPage = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-center gap-2 text-white/60">
                 <Clock className="w-4 h-4" />
-                <span>Valid for: {qrData?.date}</span>
+                <span>Date: {qrData?.date}</span>
               </div>
+              
+              {qrData?.expires_at && (
+                <div className="text-gold text-sm">
+                  Valid until 4:00 AM {new Date(qrData.expires_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                </div>
+              )}
               
               <p className="text-white/40 text-sm break-all px-4">
                 {checkinUrl}
