@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { 
   Shield, Users, Mic2, CheckCircle, XCircle, Play, 
   Plus, Minus, Crown, RefreshCw, UserCheck, Star, Gift, Search,
-  Swords, Vote, Trophy, Trash2, AlertTriangle
+  Swords, Vote, Trophy, Trash2, AlertTriangle, ChevronUp, ChevronDown, Lock
 } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/context/AuthContext';
@@ -92,6 +92,26 @@ const AdminPage = () => {
       fetchData();
     } catch (error) {
       toast.error('Failed to remove');
+    }
+  };
+
+  const handleMoveUp = async (itemId) => {
+    try {
+      const response = await axios.post(`${API}/admin/queue/${itemId}/move-up`);
+      toast.success(response.data.message);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to move song');
+    }
+  };
+
+  const handleMoveDown = async (itemId) => {
+    try {
+      const response = await axios.post(`${API}/admin/queue/${itemId}/move-down`);
+      toast.success(response.data.message);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to move song');
     }
   };
 
@@ -373,15 +393,27 @@ const AdminPage = () => {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className="glass-card p-4"
+                      className={`glass-card p-4 ${item.perk_protected ? 'border-gold/40' : ''}`}
                       data-testid={`admin-queue-item-${item.id}`}
                     >
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center">
-                          <span className="font-cinzel font-bold text-gold">{item.position}</span>
+                        <div className="relative">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${item.perk_protected ? 'bg-gold/20' : 'bg-white/5'}`}>
+                            <span className="font-cinzel font-bold text-gold">{item.position}</span>
+                          </div>
+                          {item.perk_protected && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-gold rounded-full flex items-center justify-center" title="Perk Protected">
+                              <Lock className="w-2.5 h-2.5 text-purple-deep" />
+                            </div>
+                          )}
                         </div>
                         <div className="flex-1 min-w-0 overflow-hidden">
-                          <h3 className="font-medium text-white truncate">{item.user_name}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-white truncate">{item.user_name}</h3>
+                            {item.perk_protected && (
+                              <span className="text-xs bg-gold/20 text-gold px-1.5 py-0.5 rounded shrink-0">Perk Used</span>
+                            )}
+                          </div>
                           <p className="text-gold text-sm truncate">{item.song_title} - {item.artist}</p>
                           {item.message_to_admin && (
                             <div className="mt-2 p-2 bg-purple-500/10 border border-purple-500/30 rounded-lg max-w-full overflow-hidden">
@@ -391,6 +423,31 @@ const AdminPage = () => {
                           )}
                         </div>
                         <div className="flex items-center gap-2">
+                          {/* Move Up/Down Buttons */}
+                          <div className="flex flex-col gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleMoveUp(item.id)}
+                              disabled={item.position === 1 || (item.perk_protected && item.position <= 4)}
+                              data-testid={`move-up-${item.id}`}
+                              className="h-6 w-6 p-0 border-white/20 text-white hover:bg-white/10 disabled:opacity-30"
+                              title="Move up"
+                            >
+                              <ChevronUp className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleMoveDown(item.id)}
+                              disabled={item.position === pendingQueue.length || (item.perk_protected && item.position <= 4)}
+                              data-testid={`move-down-${item.id}`}
+                              className="h-6 w-6 p-0 border-white/20 text-white hover:bg-white/10 disabled:opacity-30"
+                              title="Move down"
+                            >
+                              <ChevronDown className="w-4 h-4" />
+                            </Button>
+                          </div>
                           <Button
                             size="sm"
                             onClick={() => handleSetCurrent(item.id)}

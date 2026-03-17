@@ -40,10 +40,17 @@ A full-stack web app for King Karaoke featuring:
 | Referral System | ✅ Complete | P1 |
 | Queue Jump Perks | ✅ Complete | P1 |
 | 5 Songs per 30-min Window | ✅ Complete | P1 |
+| Admin Queue Reordering | ✅ Complete | P1 |
 
 ## What's Been Implemented
 
 ### December 2025 - Latest Updates
+- **Admin Queue Reordering**: Admins can now manually move songs up/down in the queue
+  - Up/down arrow buttons next to each queue item
+  - Songs that used a perk to enter top 4 positions are "frozen" and cannot be moved
+  - Visual indicator (lock icon + "Perk Used" badge) for protected songs
+  - POST /api/admin/queue/{item_id}/move-up and move-down endpoints
+
 - **5 Songs per 30-Minute Window**: Checked-in users can add up to 5 songs per 30-minute rolling window
   - Window resets every 30 minutes from check-in time
   - Clear feedback on songs remaining and time until reset

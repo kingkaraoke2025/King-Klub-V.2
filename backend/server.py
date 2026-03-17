@@ -829,9 +829,15 @@ async def use_rank_perk(user: dict = Depends(get_current_user)):
         )
     
     # Move user's item to new position
+    # Mark as perk_protected if moving into top 4 positions
+    perk_protected = new_position <= 4
     await db.queue.update_one(
         {"id": queue_item["id"]},
-        {"$set": {"position": new_position, "estimated_wait": (new_position - 1) * 4}}
+        {"$set": {
+            "position": new_position, 
+            "estimated_wait": (new_position - 1) * 4,
+            "perk_protected": perk_protected
+        }}
     )
     
     # Record perk usage
@@ -979,6 +985,106 @@ async def set_current_song(item_id: str, user: dict = Depends(get_admin_user)):
         raise HTTPException(status_code=404, detail="Queue item not found")
     
     return {"message": "Current song updated"}
+
+@api_router.post("/admin/queue/{item_id}/move-up")
+async def move_song_up(item_id: str, admin: dict = Depends(get_admin_user)):
+    """Move a song up one position in the queue (admin only)"""
+    item = await db.queue.find_one({"id": item_id, "status": "pending"}, {"_id": 0})
+    if not item:
+        raise HTTPException(status_code=404, detail="Queue item not found or not pending")
+    
+    current_position = item["position"]
+    
+    # Can't move up if already at position 1
+    if current_position <= 1:
+        raise HTTPException(status_code=400, detail="Song is already at the top of the queue")
+    
+    # Check if this song is perk protected
+    if item.get("perk_protected"):
+        raise HTTPException(status_code=400, detail="This song used a perk to get here and cannot be moved")
+    
+    new_position = current_position - 1
+    
+    # Find the song currently at the target position
+    song_above = await db.queue.find_one({
+        "status": "pending",
+        "position": new_position
+    }, {"_id": 0})
+    
+    # Check if the song above is perk protected (in top 4)
+    if song_above and song_above.get("perk_protected") and new_position <= 4:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cannot move above position {new_position} - that song used a perk and is protected"
+        )
+    
+    # Swap positions
+    if song_above:
+        await db.queue.update_one(
+            {"id": song_above["id"]},
+            {"$set": {"position": current_position, "estimated_wait": (current_position - 1) * 4}}
+        )
+    
+    await db.queue.update_one(
+        {"id": item_id},
+        {"$set": {"position": new_position, "estimated_wait": (new_position - 1) * 4}}
+    )
+    
+    return {
+        "message": f"Moved '{item['song_title']}' from #{current_position} to #{new_position}",
+        "old_position": current_position,
+        "new_position": new_position
+    }
+
+@api_router.post("/admin/queue/{item_id}/move-down")
+async def move_song_down(item_id: str, admin: dict = Depends(get_admin_user)):
+    """Move a song down one position in the queue (admin only)"""
+    item = await db.queue.find_one({"id": item_id, "status": "pending"}, {"_id": 0})
+    if not item:
+        raise HTTPException(status_code=404, detail="Queue item not found or not pending")
+    
+    current_position = item["position"]
+    
+    # Check if this song is perk protected (in top 4)
+    if item.get("perk_protected") and current_position <= 4:
+        raise HTTPException(status_code=400, detail="This song used a perk to get here and cannot be moved")
+    
+    # Find the max position
+    last_item = await db.queue.find_one(
+        {"status": "pending"},
+        sort=[("position", -1)]
+    )
+    max_position = last_item["position"] if last_item else 1
+    
+    # Can't move down if already at the bottom
+    if current_position >= max_position:
+        raise HTTPException(status_code=400, detail="Song is already at the bottom of the queue")
+    
+    new_position = current_position + 1
+    
+    # Find the song currently at the target position
+    song_below = await db.queue.find_one({
+        "status": "pending",
+        "position": new_position
+    }, {"_id": 0})
+    
+    # Swap positions
+    if song_below:
+        await db.queue.update_one(
+            {"id": song_below["id"]},
+            {"$set": {"position": current_position, "estimated_wait": (current_position - 1) * 4}}
+        )
+    
+    await db.queue.update_one(
+        {"id": item_id},
+        {"$set": {"position": new_position, "estimated_wait": (new_position - 1) * 4}}
+    )
+    
+    return {
+        "message": f"Moved '{item['song_title']}' from #{current_position} to #{new_position}",
+        "old_position": current_position,
+        "new_position": new_position
+    }
 
 # ==================== LEADERBOARD ====================
 @api_router.get("/leaderboard")
