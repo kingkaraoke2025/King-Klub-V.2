@@ -703,6 +703,34 @@ async def toggle_admin(user_id: str, admin_user: dict = Depends(get_admin_user))
     await db.users.update_one({"id": user_id}, {"$set": {"is_admin": new_status}})
     return {"message": f"Admin status set to {new_status}"}
 
+
+@api_router.delete("/admin/users/{user_id}")
+async def delete_user(user_id: str, admin_user: dict = Depends(get_admin_user)):
+    """Delete a user and all their associated data (admin only)"""
+    # Prevent admin from deleting themselves
+    if user_id == admin_user["id"]:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    
+    target = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Delete user's associated data
+    await db.queue.delete_many({"user_id": user_id})
+    await db.checkins.delete_many({"user_id": user_id})
+    await db.accomplishments.delete_many({"user_id": user_id})
+    await db.challenges.delete_many({"$or": [{"challenger_id": user_id}, {"opponent_id": user_id}]})
+    await db.votes.delete_many({"user_id": user_id})
+    
+    # Delete the user
+    await db.users.delete_one({"id": user_id})
+    
+    return {
+        "message": f"User '{target['display_name']}' has been deleted",
+        "deleted_user_id": user_id
+    }
+
+
 # ==================== STATS ====================
 @api_router.get("/stats")
 async def get_stats():

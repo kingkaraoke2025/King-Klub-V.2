@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { 
   Shield, Users, Mic2, CheckCircle, XCircle, Play, 
   Plus, Minus, Crown, RefreshCw, UserCheck, Star, Gift, Search,
-  Swords, Vote, Trophy
+  Swords, Vote, Trophy, Trash2
 } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/context/AuthContext';
@@ -139,6 +139,20 @@ const AdminPage = () => {
   const openAwardDialog = (u) => {
     setSelectedUser(u);
     setAwardDialogOpen(true);
+  };
+
+  const handleDeleteUser = async (userId, displayName) => {
+    if (!window.confirm(`Are you sure you want to delete "${displayName}"? This action cannot be undone and will remove all their data.`)) {
+      return;
+    }
+    
+    try {
+      const response = await axios.delete(`${API}/admin/users/${userId}`);
+      toast.success(response.data.message);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete user');
+    }
   };
 
   // Battle management functions
@@ -459,6 +473,19 @@ const AdminPage = () => {
                           className={`h-8 border-white/20 ${u.is_admin ? 'text-gold' : 'text-white/60'} hover:bg-white/10`}
                         >
                           <UserCheck className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {/* Delete User */}
+                      {u.id !== user?.id && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteUser(u.id, u.display_name)}
+                          data-testid={`delete-user-${u.id}`}
+                          className="h-8 w-8 p-0 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                          title="Delete user"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       )}
                     </div>
