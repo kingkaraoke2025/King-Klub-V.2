@@ -492,13 +492,50 @@ async def get_queue():
 
 @api_router.post("/queue")
 async def add_to_queue(data: AddSongRequest, user: dict = Depends(get_current_user)):
-    # Check if user already has a pending song
-    existing = await db.queue.find_one({
+    # Check if user has checked in today (required to add songs)
+    from zoneinfo import ZoneInfo
+    tz = ZoneInfo(VENUE_TIMEZONE)
+    now = datetime.now(tz)
+    
+    # Use same date logic as QR code (4 AM cutoff)
+    if now.hour < QR_CODE_CUTOFF_HOUR:
+        effective_date = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+    else:
+        effective_date = now.strftime("%Y-%m-%d")
+    
+    checkin_today = await db.checkins.find_one({
         "user_id": user["id"],
-        "status": {"$in": ["pending", "current"]}
+        "date": effective_date
     })
-    if existing:
-        raise HTTPException(status_code=400, detail="You already have a song in queue")
+    
+    if not checkin_today:
+        raise HTTPException(status_code=400, detail="Please check in with the QR code first to add songs to the queue")
+    
+    # Calculate current 30-minute window since check-in
+    checkin_time = datetime.fromisoformat(checkin_today["timestamp"].replace('Z', '+00:00'))
+    time_since_checkin = datetime.now(timezone.utc) - checkin_time
+    minutes_since_checkin = int(time_since_checkin.total_seconds() / 60)
+    current_window = minutes_since_checkin // 30  # Which 30-min window we're in (0, 1, 2, etc.)
+    
+    # Calculate window start and end times
+    window_start = checkin_time + timedelta(minutes=current_window * 30)
+    window_end = window_start + timedelta(minutes=30)
+    
+    # Count songs added in the current 30-minute window
+    songs_this_window = await db.queue.count_documents({
+        "user_id": user["id"],
+        "created_at": {
+            "$gte": window_start.isoformat(),
+            "$lt": window_end.isoformat()
+        }
+    })
+    
+    if songs_this_window >= 5:
+        minutes_until_reset = 30 - (minutes_since_checkin % 30)
+        raise HTTPException(
+            status_code=400, 
+            detail=f"You've added 5 songs this window. Limit resets in {minutes_until_reset} minutes!"
+        )
     
     # Validate message length
     message = data.message_to_admin
@@ -529,7 +566,86 @@ async def add_to_queue(data: AddSongRequest, user: dict = Depends(get_current_us
     # Return without _id
     if "_id" in queue_item:
         del queue_item["_id"]
-    return queue_item
+    
+    minutes_until_reset = 30 - (minutes_since_checkin % 30)
+    
+    return {
+        **queue_item,
+        "songs_this_window": songs_this_window + 1,
+        "songs_remaining": 5 - (songs_this_window + 1),
+        "window_resets_in": minutes_until_reset
+    }
+
+@api_router.get("/queue/my-status")
+async def get_my_queue_status(user: dict = Depends(get_current_user)):
+    """Get user's queue status including songs count and time remaining"""
+    from zoneinfo import ZoneInfo
+    tz = ZoneInfo(VENUE_TIMEZONE)
+    now = datetime.now(tz)
+    
+    # Use same date logic as QR code (4 AM cutoff)
+    if now.hour < QR_CODE_CUTOFF_HOUR:
+        effective_date = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+    else:
+        effective_date = now.strftime("%Y-%m-%d")
+    
+    checkin_today = await db.checkins.find_one({
+        "user_id": user["id"],
+        "date": effective_date
+    })
+    
+    if not checkin_today:
+        return {
+            "checked_in": False,
+            "can_add_songs": False,
+            "reason": "Please check in with the QR code first",
+            "songs_this_window": 0,
+            "max_songs_per_window": 5
+        }
+    
+    # Calculate current 30-minute window
+    checkin_time = datetime.fromisoformat(checkin_today["timestamp"].replace('Z', '+00:00'))
+    time_since_checkin = datetime.now(timezone.utc) - checkin_time
+    minutes_since_checkin = int(time_since_checkin.total_seconds() / 60)
+    current_window = minutes_since_checkin // 30
+    
+    # Calculate window times
+    window_start = checkin_time + timedelta(minutes=current_window * 30)
+    window_end = window_start + timedelta(minutes=30)
+    minutes_until_reset = 30 - (minutes_since_checkin % 30)
+    
+    # Count songs added in current window
+    songs_this_window = await db.queue.count_documents({
+        "user_id": user["id"],
+        "created_at": {
+            "$gte": window_start.isoformat(),
+            "$lt": window_end.isoformat()
+        }
+    })
+    
+    # Get user's pending songs
+    user_songs = await db.queue.find({
+        "user_id": user["id"],
+        "status": {"$in": ["pending", "current"]}
+    }, {"_id": 0}).sort("position", 1).to_list(20)
+    
+    can_add = songs_this_window < 5
+    
+    return {
+        "checked_in": True,
+        "checkin_time": checkin_today["timestamp"],
+        "minutes_since_checkin": minutes_since_checkin,
+        "current_window": current_window + 1,  # Human-friendly (1st, 2nd, etc.)
+        "window_resets_in": minutes_until_reset,
+        "can_add_songs": can_add,
+        "songs_this_window": songs_this_window,
+        "songs_remaining": 5 - songs_this_window,
+        "max_songs_per_window": 5,
+        "total_songs_in_queue": len(user_songs),
+        "my_songs": user_songs,
+        "reason": None if can_add else f"5 song limit reached. Resets in {minutes_until_reset} min!"
+    }
+
 
 @api_router.delete("/queue/{item_id}")
 async def remove_from_queue(item_id: str, user: dict = Depends(get_current_user)):

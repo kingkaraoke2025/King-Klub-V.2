@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic2, Clock, Plus, X, Music, User, Loader2, MessageSquare, Zap, Crown, Sparkles } from 'lucide-react';
+import { Mic2, Clock, Plus, X, Music, User, Loader2, MessageSquare, Zap, Crown, Sparkles, Timer, AlertCircle } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ const QueuePage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [perkDialogOpen, setPerkDialogOpen] = useState(false);
   const [perkStatus, setPerkStatus] = useState(null);
+  const [queueStatus, setQueueStatus] = useState(null);
   const [usingPerk, setUsingPerk] = useState(false);
   const [songTitle, setSongTitle] = useState('');
   const [artist, setArtist] = useState('');
@@ -44,13 +45,24 @@ const QueuePage = () => {
     }
   };
 
+  const fetchQueueStatus = async () => {
+    try {
+      const response = await axios.get(`${API}/queue/my-status`);
+      setQueueStatus(response.data);
+    } catch (error) {
+      console.error('Failed to fetch queue status:', error);
+    }
+  };
+
   useEffect(() => {
     fetchQueue();
     fetchPerkStatus();
+    fetchQueueStatus();
     // Poll for updates every 10 seconds
     const interval = setInterval(() => {
       fetchQueue();
       fetchPerkStatus();
+      fetchQueueStatus();
     }, 10000);
     return () => clearInterval(interval);
   }, []);

@@ -1,25 +1,7 @@
 <analysis>**original_problem_statement:**
-King Klub Creation Statement
+The user wants to build King Klub, a full-stack loyalty, engagement, and entertainment platform for a karaoke bar.
 
-Project Name: King Klub
-
-Platform: app.emergent.sh (Full-Stack Web App)
-
-Purpose:
-King Klub is a loyalty, engagement, and entertainment platform for King Karaoke. Its core mission is to encourage participation, reward customers, and enhance the overall karaoke experience. This app acts as both a gamified reward system and a practical tool for managing song queues, tracking accomplishments, and fostering community among singers.
-
-Vision:
-To create an immersive, fun, and motivating experience for karaoke patrons that keeps them coming back while providing the King Karaoke staff with easy-to-use tools to manage customer engagement.
-
-Core Features:
-- User Accounts & Profiles: Patrons can log in, track their progress, and view their reward level.
-- Reward System (The King Club): Users earn points and advance through ranks. Rewards are both virtual and real.
-- Song Queue & Management: Users can view and manage their song selections.
-- Gamification & Accomplishments: The app tracks karaoke accomplishments.
-- Notifications & Engagement: Optional reminders and notifications.
-- Admin Tools: Staff can monitor progress, manage rewards, and oversee the queue.
-
-PRODUCT REQUIREMENTS:
+Initial PRODUCT REQUIREMENTS:
 - Add a logo for color scheme and advertisement purposes.
 - Implement a detailed points and badges system based on user actions.
 - Add QR code scanning for automatic check-ins.
@@ -28,166 +10,190 @@ PRODUCT REQUIREMENTS:
 - Implement a real-time voting popup using WebSockets with a countdown timer.
 - Add sound effects to voting notifications.
 
+Subsequent User Requests from this session:
+- Add female descriptions to ranks (e.g., Squire/Lady, Prince/Princess).
+- Add new badges for tipping the bartender.
+- Add new loyalty badges for total (not consecutive) nights attended.
+- Implement a user referral system with badges.
+- Create a How to Earn Points page listing all badges and points.
+- Update rank point thresholds.
+- Allow admins to manually end a battle by picking a winner if no one votes.
+- Allow users to add a message to the KJ (admin) when adding a song to the queue.
+- Fix QR code date being a day ahead (due to UTC) and make it expire at 4 AM local time.
+- Add a function for admins to delete users.
+- Add a referral link sharing section to the user dashboard.
+- Change QR check-in points from 50 to 10.
+- Implement a once-per-night, rank-based queue-jumping perk for users who have checked in.
+- Display the perks on the user dashboard.
+- Allow users to add up to 5 songs to the queue within a rolling 30-minute window after QR check-in.
+
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack web application, King Klub, built with a FastAPI backend, React frontend, and MongoDB database. The application features:
-- User authentication (separate for users and admins) and profiles.
-- A gamified point and rank system (Peasant to Prince/Princess).
-- A badge and accomplishment system tied to user actions.
-- An admin panel for managing users, awarding points, and overseeing battles.
-- A QR code system for venue check-ins, managed by admins.
-- A real-time Battle Arena where users can challenge each other, with different battle types.
-- A real-time voting popup, broadcast via WebSockets to all users when an admin opens voting for a battle.
+A full-stack web application, King Klub, built with a FastAPI backend, React frontend, and MongoDB database.
+- **Authentication:** Separate user and admin login flows.
+- **Gamification:** A comprehensive point, rank, badge, and accomplishment system. Users have a title preference (e.g., Prince/Princess).
+- **Admin Panel:** A dashboard for admins to manage users (award points, delete users), manage battles (open voting, pick winners), and view the song queue with user messages.
+- **Check-In:** An admin-managed QR code system for venue check-ins. The code is valid for a specific day in the 'America/Chicago' timezone and expires at 4 AM the next day.
+- **Song Queue:** Users can add songs to a queue. A rank-based, once-per-night perk allows users to jump their position in the queue.
+- **Referral System:** Users have a unique referral link to share, and they earn badges for successful referrals.
+- **Real-time Features:** A Battle Arena with a WebSocket-based voting system and admin notifications for events like perk usage.
+- **Informational Pages:** A How to Earn Points page detailing all point actions and badges.
 
 **Last working item**:
-- **Last item agent was working:** Implementing sound effects for the voting notification popup. The agent created a sound utility file () and was in the process of integrating it into the  component to play a sound when a voting notification is received.
+- **Last item agent was working:** Implementing a feature to allow users who have checked in via QR code to add up to 5 songs to the queue. This limit operates on a rolling 30-minute window, which resets every 30 minutes until the QR code expires at 4 AM.
 - **Status:** IN PROGRESS
 - **Agent Testing Done:** N
-- **Which testing method agent to use?** Frontend testing agent to verify the sound plays when the voting popup appears. Manual verification by listening is also an option, but an automated test is preferred.
+- **Which testing method agent to use?** backend testing agent. This is a complex backend logic change involving time windows and user state. The agent should write specific tests for the  and  endpoints to verify the 5-song limit and the 30-minute rolling window reset correctly.
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-  - **Issue 1:** The user reported uncaught runtime errors after the admin account was created. The agent was unable to reproduce the issue and dismissed it as a temporary problem after checking logs, which only showed webpack deprecation warnings. This issue was not fully resolved. (Priority: P1)
+- **Issue 1:** Complete the 5 songs per 30 minutes queue feature. (Priority: P0)
+- **Issue 2:** The uncaught runtime errors reported by the user after admin login was never fully resolved. The agent dismissed it after being unable to reproduce it. (Priority: P1)
 
-  **Issues Detail:**
-  - **Issue 1:** Uncaught runtime errors reported by user
-     - **Attempted fixes:** The agent logged in successfully as the admin, took a screenshot, and checked frontend logs. No application errors were found.
-     - **Next debug checklist:**
-         1.  Ask the user for the exact error message or a browser console screenshot.
-         2.  Review the code around the ,  routes, and authentication context to look for potential race conditions or state management issues that might not appear on every login.
-         3.  Use the frontend testing agent to specifically target the admin login flow and subsequent page loads to try and reproduce the error under test conditions.
-     - **Why fix this issue and what will be achieved with the fix?** To ensure the application is stable for admin users, who are critical for running the platform at the venue.
-     - **Status:** NOT STARTED
-     - **Is recurring issue?** N (Reported once)
-     - **Should Test frontend/backend/both after fix?** Frontend
-     - **Blocked on other issue:** None
+**Issues Detail:**
+- **Issue 1:** 5 songs per 30 minutes feature
+    - **Attempted fixes:** The agent started implementing the logic in  in the  and  functions but encountered a syntax error during implementation.
+    - **Next debug checklist:**
+        1.  Correct the syntax error in the  function in .
+        2.  Finalize the logic in  to accurately reflect the user's remaining songs and time window.
+        3.  Thoroughly test the endpoint to ensure the 5-song limit works and resets correctly every 30 minutes.
+    - **Why fix this issue and what will be achieved with the fix?** It will fulfill the user's request to allow more engagement from checked-in users by letting them queue multiple songs.
+    - **Status:** IN PROGRESS
+    - **Is recurring issue?** N
+    - **Should Test frontend/backend/both after fix?** Backend
+    - **Blocked on other issue:** None
+
+- **Issue 2:** Uncaught runtime errors reported by user
+    - **Attempted fixes:** The agent logged in successfully as admin, took a screenshot, and checked frontend logs. No application errors were found, and the issue was dismissed.
+    - **Next debug checklist:**
+        1. Ask the user for the exact error message or a browser console screenshot if it happens again.
+        2. Review the code around ,  routes, and  to look for potential race conditions or state management issues.
+        3. Use the frontend testing agent to specifically target the admin login flow and subsequent page loads to try and reproduce the error.
+    - **Why fix this issue and what will be achieved with the fix?** To ensure the application is stable for admin users, who are critical for running the platform.
+    - **Status:** NOT STARTED
+    - **Is recurring issue?** N (Reported once in the previous session)
+    - **Should Test frontend/backend/both after fix?** Frontend
+    - **Blocked on other issue:** None
 
 **In progress Task List**:
-  - **Task 1:** Complete the implementation of sound effects for voting notifications (Priority: P0)
-
- **Task Detail:**
-  - **Task 1:**
-     - **Where to resume:** Continue editing . Import the  function from  and call it within the  hook that handles the WebSocket message for opening a vote.
-     - **What will be achieved with this?** A sound effect will play for all users when an admin initiates a battle vote, providing an immediate, audible alert.
-     - **Status:** IN PROGRESS
-     - **Should Test frontend/backend/both after fix?** Frontend
-     - **Blocked on something:** None
+- **Task 1:** Complete the 5 songs per 30 minutes queue feature. (Priority: P0)
+  - **Where to resume:** Resume editing . The last action was attempting to fix a syntax error in the  function.
+  - **What will be achieved with this?** Users will be able to add multiple songs after checking in, increasing engagement.
+  - **Status:** IN PROGRESS
+  - **Should Test frontend/backend/both after fix?** Backend
+  - **Blocked on something:** None
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-  - **Task 1:** Comprehensive testing of the Battle and Voting system. The features were implemented but not tested end-to-end with the testing agent. (P1)
+  - **Task 1:** Comprehensive regression testing of the entire application. Many features were added without running the full testing suite. (P1)
 - **Future Tasks:**
-  - **Task 1:** Expand the notifications system (e.g., push notifications, email reminders) as per the original vision.
-  - **Task 2:** Plan and potentially develop a mobile app version of the platform.
+  - **Task 1:** Expand the notifications system (e.g., push notifications, email reminders).
+  - **Task 2:** Plan and develop a mobile app version of the platform.
 
 **Completed work in this session**
 - **Recently completed:**
-  - Initial application scaffold (FastAPI + React + MongoDB) (DONE)
-  - Royal purple and gold theme with custom fonts (DONE)
-  - User authentication and rank progression system (DONE)
-  - Logo integration across the application (DONE)
-  - Detailed points and badges system based on user actions (DONE)
-  - Admin-controlled QR code check-in feature (DONE)
-  - Separate login page for admin staff (DONE)
-  - Battle/Challenge system with multiple modes (DONE)
-  - Real-time voting popup via WebSockets with a countdown timer (DONE)
-  - Admin dashboard enhancements for battle management (DONE)
+  - **Sound Effects for Voting:** Verified existing implementation. (DONE)
+  - **Battle/Voting System Testing:** Tested with testing agent, which found and fixed a critical backend routing issue. (DONE)
+  - **Female Rank Titles:** Implemented gender-neutral/female titles (e.g., Squire/Lady) and a user preference setting. (DONE)
+  - **New Badges:** Added badges for tipping the bartender, total attendance, and user referrals. (DONE)
+  - **How to Earn Points Page:** Created a new page detailing all ranks, point actions, and badges. (DONE)
+  - **Rank & Badge Updates:** Adjusted point thresholds and badge names per user request. (DONE)
+  - **Admin Battle Management:** Admins can now manually pick a winner if a battle has no votes. (DONE)
+  - **Song Queue Message:** Users can add a message to the KJ when adding a song. (DONE)
+  - **QR Code Timezone Fix:** QR code generation now uses 'America/Chicago' timezone and expires at 4 AM the next day. (DONE)
+  - **Admin Delete User:** Admins can delete users via the admin panel, with a confirmation modal. (DONE)
+  - **Referral Link Sharing:** Added a referral link sharing section to the user dashboard. (DONE)
+  - **Queue Jump Perk:** Implemented a rank-based, once-per-night queue jump perk for checked-in users. (DONE)
 
 **Earlier issues found/mentioned but not fixed**
-   - **Issue 1:** User reported uncaught runtime errors after admin login. The agent could not reproduce it and the issue was left unresolved.
-     - **Debug checklist:** Ask user for console logs/screenshot, review auth/routing code, use testing agent to stress the login flow.
-     - **Why to solve this issue and what will be achieved with this?** Ensures app stability for critical admin users.
-     - **Should Test frontend/backend/both after fix:** Frontend
-     - **Is recurring issue?** N
+- **Issue 1:** User reported uncaught runtime errors after admin login in the previous session.
+    - **Debug checklist:** Ask user for console logs/screenshot, review auth/routing code, use frontend testing agent to stress the login flow.
+    - **Why to solve this issue and what will be achieved with this?** Ensures app stability for critical admin users.
+    - **Should Test frontend/backend/both after fix:** Frontend
+    - **Is recurring issue?** N
 
 **Known issue recurrence from previous fork**
-  - None.
+- None.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Backend:** FastAPI, MongoDB (via ), WebSockets ()
-- **Frontend:** React, Tailwind CSS, Shadcn UI, 
-- **Real-time:** WebSockets for broadcasting voting events from the server to all connected clients.
-- **Database:** MongoDB for storing user data, songs, battles, etc.
+- **Backend:** FastAPI, MongoDB (via ), WebSockets, Timezone handling with  and .
+- **Frontend:** React, Tailwind CSS, Shadcn UI, , React Context API for state management.
+- **Real-time:** WebSockets for broadcasting voting events and admin notifications.
+- **Database:** MongoDB.
 
 **key DB schema**
-- **users:** {, , , , , , , , }
-- **songs:** {, , , , }
-- **queue:** {, , , }
+- **users:** {, , , , , , , , , , , }
+- **queue:** {, , , , , }
+- **checkins:** {, , , }
 - **battles:** {, , , , , , }
-- **qr_codes:** {, , Thu Mar 12 03:53:17 UTC 2026, }
+- **qr_codes:** {, , , }
+- **perk_usage:** {, , }
 
 **changes in tech stack**
-- None. The agent consistently used the FastAPI/React/MongoDB stack.
+- The  library was used in the backend to handle venue-specific timezones.
 
 **All files of reference**
-- : The main FastAPI application file, containing all API endpoints, WebSocket logic, and database interactions.
-- : The root React component, defines all frontend routes and integrates the WebSocket hook and VotePopup.
-- : The admin panel for managing users, points, and battles.
-- : The user-facing Battle Arena for issuing and viewing challenges.
-- : The component that appears for all users when a battle vote is active.
-- : The custom hook for managing the WebSocket connection.
-- : A new utility for playing sound effects.
+- : The monolithic backend file containing all API endpoints, WebSocket logic, database interactions, and business logic for perks, queues, and check-ins.
+- : Admin panel UI for managing users, battles, and the song queue.
+- : User dashboard showing rank, stats, referral link, and perks.
+- : The song queue interface where users add songs and can use their rank perk.
+- : User registration form, now includes fields for title preference and referral code.
+- : A new page detailing all gamification elements.
+- : Manages user authentication state, including .
 
 **Areas that need refactoring**:
-- The WebSocket implementation in  is basic. A dedicated connection manager class could improve robustness by handling connects/disconnects and broadcasts more cleanly.
-- The  file is becoming very large. Consider splitting routes into separate files (e.g., , ) and including them in the main app to improve modularity.
+- ** is critically oversized.** It handles auth, users, badges, battles, WebSockets, queue, perks, and more. It should be broken down into a modular structure with separate files for different routes (e.g., , ).
+- The frontend could benefit from more custom hooks to abstract complex logic away from components, especially API fetching logic.
 
 **key api endpoints**
-- 
-- 
-- 
-- 
--  (admin only)
-- 
-- 
-- 
--  (admin only)
--  (admin only)
--  (WebSocket connection for real-time notifications)
+- : Adds a song to the queue (logic for 5-song limit is being added here).
+- : Checks the user's current queue eligibility.
+- : Allows a user to use their rank-based queue perk.
+- : Deletes a user (admin only).
+- : Allows admin to manually set a battle winner.
+- : Generates the daily QR code with a 4 AM expiry.
+- : User registration, now handles  and .
+- : Gets the calling user's referral statistics.
 
 **Critical Info for New Agent**
-- There are two separate login flows:  for regular users and  for staff. Admin access is ultimately controlled by the  flag on a user's database record.
-- The real-time voting feature is a core part of the battle system. It relies on an admin clicking Open Voting in the admin panel, which triggers a WebSocket broadcast to all connected clients, causing the  to appear.
-- The user-reported uncaught runtime errors were not resolved. Be cautious and prepared to debug this if the user mentions it again. The agent suspected a temporary issue, but it could be a latent bug in the authentication or state management flow.
+- **Venue Timezone:** All date/time logic related to check-ins and QR codes is hardcoded to the 'America/Chicago' timezone in .
+- **Duplicate User Accounts:** Be aware that users might create multiple accounts. The previous agent encountered an issue where a badge appeared not to be awarded, but it was due to two different users having the same display name (King Kota).
+- **Rank Perk Logic:** The queue jump perk has several conditions: the user must have checked in via QR for the current day, must not have already used the perk that day, and must have a song in the queue.
+- **Admin Deletion:** The delete user function is a hard delete and removes the user and all their associated data.
 
 **documents and test reports created in this job**
-- 
-- Test reports are located in , but the most recent features (battles, voting) have not been tested by the agent.
+- : Updated several times with completed features.
+- : Generated by the testing agent after fixing a backend routing issue.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** What are the admin credentials?
-    -   **Agent:** Provided test credentials and asked if the user wanted a new account created.
-2.  **User:** 1. (meaning yes, create a new account)
-    -   **Agent:** Asked for the desired email and password.
-3.  **User:** , 
-    -   **Agent:** Confirmed creation of the new admin account.
-4.  **User:** I got a message that said uncaught runtime errors.
-    -   **Agent:** Investigated by logging in successfully, checking logs, and concluded it might be a temporary issue. Asked the user for more details.
-5.  **User:** (Shared code snippets for a battle/challenge system).
-    -   **Agent:** Acknowledged the request and began implementing the battle system.
-6.  **User:** (Shared code snippets for a real-time WebSocket voting popup).
-    -   **Agent:** Acknowledged the request and began implementing the real-time voting feature.
-7.  **User:** 1. (The user message was just 1., likely in response to a choice, but the agent interpreted it as a new request for sound effects).
-    -   **Agent:** Interpreted the request as adding sound effects and started implementation.
-8.  The last sequence of messages from the user drove the implementation of the battle and real-time voting features. The final active task is adding sound effects to the voting popup.
+1. **User:** Right now only one song per singer is allowed... Could up to 5 songs every 30 minutes from qr check in be allowed? (COMPLETION: IN PROGRESS)
+2. **User:** 5 songs every 30 minutes after qr check in, a reset after every thirty minutes until QR closes. (COMPLETION: IN PROGRESS - Agent is implementing this logic).
+3. **User:** Can you list the perks and a description of them under their respective ranks in the dashboard? (COMPLETION: DONE)
+4. **User:** I want to make a perk based on rank that can only be used once a QR sign in... (COMPLETION: DONE)
+5. **User:** Change amount of points for check in using qr code from 50 to 10 points. (COMPLETION: DONE)
+6. **User:** I didnt see a dialog pop up as admin. (Context: For deleting a user) (COMPLETION: DONE - Agent replaced  with a proper modal).
+7. **User:** Delete user function not working. (COMPLETION: DONE - Agent investigated and found it was working, but improved the UI confirmation).
+8. **User:** How does the referral link work? (COMPLETION: DONE - Agent provided a detailed explanation).
+9. **User:** When I clicked the share your referral link, i got an error saying failed to copy link. (COMPLETION: DONE - Agent fixed the copy/share functionality).
+10. **User:** add referral link sharing on dashboard (COMPLETION: DONE)
 
 **Project Health Check:**
-- **Working:** The core application is functional. User/admin logins, the points/badge system, QR check-ins, and the battle system are implemented.
-- **Broken:** A potential, unreproduced uncaught runtime error on the frontend for admin users.
-- **Mocked:** Some parts of the workflow rely on manual admin intervention (e.g., opening voting, finalizing battles) which is by design for this stage.
+- **Working:** Core application features including auth, points, badges, referrals, battles, and admin functions.
+- **Broken:** The 5 songs per 30 minutes queue feature is currently broken mid-implementation in .
+- **Mocked:** None.
 
 **3rd Party Integrations**
-- None currently implemented.
+- None.
 
 **Testing status**
-- **Testing agent used after significant changes:** NO. The testing agent was used early on, but not after implementing the complex Battle and WebSocket Voting systems.
+- **Testing agent used after significant changes:** YES, once, early in the session to fix a routing issue. It has not been run since numerous other features were added.
 - **Troubleshoot agent used after agent stuck in loop:** NO
-- **Test files created:** None.
-- **Known regressions:** None known, but the lack of recent testing means they could exist.
+- **Test files created:**  was created by the testing agent.
+- **Known regressions:** None known, but high possibility due to the large number of features added without comprehensive regression testing.
 
 **Credentials to test flow:**
 - **Admin:**
@@ -198,5 +204,5 @@ A full-stack web application, King Klub, built with a FastAPI backend, React fro
   - **Password:** 
 
 **What agent forgot to execute**
-- The agent did not perform a thorough investigation of the uncaught runtime errors reported by the user, dismissing it after a single successful login and a log check.
-- The agent did not run the  after implementing the complex Battle and Real-Time Voting features, which are critical parts of the application. It relied only on screenshots for verification.</analysis>
+- The agent never fully investigated the uncaught runtime errors reported by the user at the start. The issue was dismissed and remains a potential latent bug.
+- The agent did not run the testing agent for regression tests after adding multiple major features like the referral system, queue perks, and timezone fixes. It relied solely on manual  commands and screenshots for verification of new features.</analysis>
