@@ -68,31 +68,62 @@ const DashboardPage = () => {
   const referralLink = referralStats ? `${FRONTEND_URL}/register?ref=${referralStats.referral_code}` : '';
 
   const handleCopyLink = async () => {
+    if (!referralLink) {
+      toast.error('Referral link not available');
+      return;
+    }
+    
     try {
-      await navigator.clipboard.writeText(referralLink);
+      // Try modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(referralLink);
+      } else {
+        // Fallback for older browsers or non-secure contexts
+        const textArea = document.createElement('textarea');
+        textArea.value = referralLink;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
       setCopied(true);
       toast.success('Referral link copied!');
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      toast.error('Failed to copy link');
+      console.error('Copy failed:', err);
+      // Show the link in an alert as last resort
+      toast.info('Copy this link: ' + referralLink);
     }
   };
 
   const handleShare = async () => {
-    if (navigator.share) {
+    if (!referralLink) {
+      toast.error('Referral link not available');
+      return;
+    }
+    
+    // Check if Web Share API is available and we're in a secure context
+    if (navigator.share && window.isSecureContext) {
       try {
         await navigator.share({
           title: 'Join me at King Karaoke!',
-          text: `Join King Klub and start your karaoke journey! Sign up with my link to get started.`,
+          text: 'Join King Klub and start your karaoke journey! Sign up with my link to get started.',
           url: referralLink,
         });
+        toast.success('Thanks for sharing!');
       } catch (err) {
+        // User cancelled or share failed - try copy instead
         if (err.name !== 'AbortError') {
-          handleCopyLink(); // Fallback to copy
+          handleCopyLink();
         }
       }
     } else {
-      handleCopyLink(); // Fallback to copy
+      // Fallback to copy
+      handleCopyLink();
     }
   };
 
