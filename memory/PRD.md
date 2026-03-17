@@ -33,10 +33,26 @@ A full-stack web app for King Karaoke featuring:
 | Badges/Accomplishments | ✅ Complete | P1 |
 | Admin Panel | ✅ Complete | P1 |
 | Title Preference (Male/Female ranks) | ✅ Complete | P1 |
+| QR Code Check-in System | ✅ Complete | P1 |
+| Battle/Challenge System | ✅ Complete | P1 |
+| Real-time WebSocket Voting | ✅ Complete | P1 |
+| Sound Effects for Voting | ✅ Complete | P1 |
+| Referral System | ✅ Complete | P1 |
+| Queue Jump Perks | ✅ Complete | P1 |
+| 5 Songs per 30-min Window | ✅ Complete | P1 |
 
-## What's Been Implemented (December 2025)
+## What's Been Implemented
 
-### Backend (FastAPI + MongoDB)
+### December 2025 - Latest Updates
+- **5 Songs per 30-Minute Window**: Checked-in users can add up to 5 songs per 30-minute rolling window
+  - Window resets every 30 minutes from check-in time
+  - Clear feedback on songs remaining and time until reset
+  - Backend validation with helpful error messages
+  - GET /api/queue/my-status endpoint provides full queue eligibility info
+
+### Previous Implementations
+
+#### Backend (FastAPI + MongoDB)
 - User authentication (register, login, JWT tokens)
 - Rank system with male/female title options:
   - Peasant (both)
@@ -52,19 +68,21 @@ A full-stack web app for King Karaoke featuring:
 - **QR Code Check-in System** - Daily venue check-ins with rotating QR codes
 - **Battle/Challenge System** - 5 challenge types (Royal Duel, Blind Challenge, Rank Battle, Song Roulette, Harmony Duel)
 - **Real-time WebSocket Voting** - Broadcast voting events to all connected clients
-- Voting finalization with automatic winner determination and point awards
+- **Referral System** - Users earn badges for referring friends
+- **Rank-based Queue Perks** - Once-per-night queue jump based on rank
 
-### Frontend (React + Tailwind)
+#### Frontend (React + Tailwind)
 - Landing page with royal theme
 - Auth pages (login, register, separate admin login)
-- Dashboard with rank card, progress bar, stats
-- Song Queue page with add/remove functionality
+- Dashboard with rank card, progress bar, stats, referral link sharing
+- Song Queue page with add/remove functionality, perk usage
 - Leaderboard with top 3 podium display
 - Badges/Accomplishments page
-- Admin panel (queue management, user management, battle management)
+- Admin panel (queue management, user management, battle management, delete users)
 - **Battle Arena Page** - Challenge opponents, view active battles
 - **Real-time Vote Popup** - WebSocket-driven popup with countdown timer
 - **Sound Effects** - Web Audio API sounds for battle start, voting, warnings, and victory
+- **How to Earn Points Page** - Detailed breakdown of all badges and point actions
 
 ### Design
 - Dark royal theme (#0F0518 background)
@@ -76,21 +94,24 @@ A full-stack web app for King Karaoke featuring:
 
 ## Prioritized Backlog
 
-### P0 - Critical (Completed)
+### P0 - Critical (All Completed)
 - [x] User authentication
 - [x] Core dashboard
 - [x] Song queue
 - [x] Basic points system
 
-### P1 - Important (Completed)
+### P1 - Important (All Completed)
 - [x] Leaderboard
-- [x] Badges system (16 badges across 5 categories)
+- [x] Badges system (23 badges across 6 categories)
 - [x] Admin panel
 - [x] Rank progression display
 - [x] QR code check-in system
 - [x] Battle/Challenge system with 5 modes
 - [x] Real-time WebSocket voting
 - [x] Sound effects for voting notifications
+- [x] Referral system with badges
+- [x] Queue jump perks based on rank
+- [x] 5 songs per 30-minute window feature
 
 ### P2 - Nice to Have (Future)
 - [ ] Push notifications (mobile/browser)
@@ -100,14 +121,27 @@ A full-stack web app for King Karaoke featuring:
 - [ ] Song catalog/search integration
 - [ ] Mobile app version
 
+## Pending Issues
+- User reported "uncaught runtime errors" after admin login (not reproduced - monitor for recurrence)
+
 ## Next Tasks
-1. Expand notifications system (push/email)
-2. Build reward redemption catalog
-3. Create event management for special karaoke nights
-4. Refactor server.py into modular routers
+1. Monitor for any runtime errors reported by users
+2. Expand notifications system (push/email)
+3. Build reward redemption catalog
+4. Create event management for special karaoke nights
+5. Refactor server.py into modular routers (recommended for maintainability)
+
+## Test Reports
+- `/app/test_reports/iteration_1.json` - Battle system tests
+- `/app/test_reports/iteration_3.json` - Queue song limit tests (33/33 passed)
 
 ## Tech Stack
 - **Frontend**: React 19, Tailwind CSS, Framer Motion, Shadcn/UI
 - **Backend**: FastAPI, Motor (MongoDB async driver)
 - **Database**: MongoDB
 - **Auth**: JWT with bcrypt password hashing
+- **Timezone**: America/Chicago (hardcoded for venue)
+
+## Test Credentials
+- **Admin**: admin@kingkaraoke2025.com / admin123
+- **User**: royaltest@example.com / password123
