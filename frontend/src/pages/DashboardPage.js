@@ -232,6 +232,97 @@ const DashboardPage = () => {
           </motion.div>
         </div>
 
+        {/* Rank Perks Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.25 }}
+          className="glass-card p-6"
+          data-testid="rank-perks-section"
+        >
+          <h3 className="font-cinzel font-bold text-xl text-gold mb-4 flex items-center gap-2">
+            <Sparkles className="w-5 h-5" />
+            Queue Perks by Rank
+          </h3>
+          <p className="text-white/60 text-sm mb-6">
+            Higher ranks unlock powerful queue perks! Use once per night after checking in with the QR code.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Peasant */}
+            <div className={`p-4 rounded-lg border ${currentRankName === 'Peasant' ? 'border-gold/50 bg-gold/5' : 'border-white/10 bg-white/5'}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`text-lg font-cinzel font-bold ${currentRankName === 'Peasant' ? 'text-gold' : 'text-white/60'}`}>
+                  Peasant
+                </span>
+                {currentRankName === 'Peasant' && <span className="text-xs bg-gold/20 text-gold px-2 py-0.5 rounded-full">You</span>}
+              </div>
+              <p className="text-white/50 text-sm">No perk - Earn 500 points to unlock!</p>
+              <p className="text-white/30 text-xs mt-1">0+ points</p>
+            </div>
+
+            {/* Squire/Lady */}
+            <div className={`p-4 rounded-lg border ${['Squire', 'Lady'].includes(currentRankName) ? 'border-gold/50 bg-gold/5' : 'border-white/10 bg-white/5'}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`text-lg font-cinzel font-bold ${['Squire', 'Lady'].includes(currentRankName) ? 'text-gold' : 'text-white/60'}`}>
+                  Squire / Lady
+                </span>
+                {['Squire', 'Lady'].includes(currentRankName) && <span className="text-xs bg-gold/20 text-gold px-2 py-0.5 rounded-full">You</span>}
+              </div>
+              <p className="text-green-400 text-sm font-medium">Jump ahead 3 spots in queue</p>
+              <p className="text-white/30 text-xs mt-1">500+ points</p>
+            </div>
+
+            {/* Knight/Dame */}
+            <div className={`p-4 rounded-lg border ${['Knight', 'Dame'].includes(currentRankName) ? 'border-gold/50 bg-gold/5' : 'border-white/10 bg-white/5'}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`text-lg font-cinzel font-bold ${['Knight', 'Dame'].includes(currentRankName) ? 'text-gold' : 'text-white/60'}`}>
+                  Knight / Dame
+                </span>
+                {['Knight', 'Dame'].includes(currentRankName) && <span className="text-xs bg-gold/20 text-gold px-2 py-0.5 rounded-full">You</span>}
+              </div>
+              <p className="text-blue-400 text-sm font-medium">Jump ahead 5 spots in queue</p>
+              <p className="text-white/30 text-xs mt-1">1,000+ points</p>
+            </div>
+
+            {/* Count/Countess */}
+            <div className={`p-4 rounded-lg border ${['Count', 'Countess'].includes(currentRankName) ? 'border-gold/50 bg-gold/5' : 'border-white/10 bg-white/5'}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`text-lg font-cinzel font-bold ${['Count', 'Countess'].includes(currentRankName) ? 'text-gold' : 'text-white/60'}`}>
+                  Count / Countess
+                </span>
+                {['Count', 'Countess'].includes(currentRankName) && <span className="text-xs bg-gold/20 text-gold px-2 py-0.5 rounded-full">You</span>}
+              </div>
+              <p className="text-purple-400 text-sm font-medium">Jump to 5th spot in queue</p>
+              <p className="text-white/30 text-xs mt-1">1,500+ points</p>
+            </div>
+
+            {/* Duke/Duchess */}
+            <div className={`p-4 rounded-lg border ${['Duke', 'Duchess'].includes(currentRankName) ? 'border-gold/50 bg-gold/5' : 'border-white/10 bg-white/5'}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`text-lg font-cinzel font-bold ${['Duke', 'Duchess'].includes(currentRankName) ? 'text-gold' : 'text-white/60'}`}>
+                  Duke / Duchess
+                </span>
+                {['Duke', 'Duchess'].includes(currentRankName) && <span className="text-xs bg-gold/20 text-gold px-2 py-0.5 rounded-full">You</span>}
+              </div>
+              <p className="text-pink-400 text-sm font-medium">Jump to 2nd spot in queue</p>
+              <p className="text-white/30 text-xs mt-1">2,000+ points</p>
+            </div>
+
+            {/* Prince/Princess */}
+            <div className={`p-4 rounded-lg border ${['Prince', 'Princess'].includes(currentRankName) ? 'border-gold/50 bg-gold/5' : 'border-white/10 bg-white/5'}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`text-lg font-cinzel font-bold ${['Prince', 'Princess'].includes(currentRankName) ? 'text-gold' : 'text-white/60'}`}>
+                  Prince / Princess
+                </span>
+                {['Prince', 'Princess'].includes(currentRankName) && <span className="text-xs bg-gold/20 text-gold px-2 py-0.5 rounded-full">You</span>}
+              </div>
+              <p className="text-gold text-sm font-medium">Jump to 1st spot in queue!</p>
+              <p className="text-white/30 text-xs mt-1">2,500+ points</p>
+            </div>
+          </div>
+        </motion.div>
+
         {/* Action Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Join Queue Card */}
