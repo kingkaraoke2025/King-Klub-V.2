@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { 
   Shield, Users, Mic2, CheckCircle, XCircle, Play, 
   Plus, Minus, Crown, RefreshCw, UserCheck, Star, Gift, Search,
-  Swords, Vote, Trophy, Trash2, AlertTriangle, ChevronUp, ChevronDown, Lock
+  Swords, Vote, Trophy, Trash2, AlertTriangle, ChevronUp, ChevronDown, Lock, GripVertical
 } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/context/AuthContext';
@@ -12,9 +12,139 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import axios from 'axios';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+
+// Sortable Queue Item Component
+const SortableQueueItem = ({ item, pendingQueueLength, onSetCurrent, onRemove, onMoveUp, onMoveDown }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ 
+    id: item.id,
+    disabled: item.perk_protected && item.position <= 4
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1000 : 1,
+  };
+
+  const isPerkProtected = item.perk_protected && item.position <= 4;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`glass-card p-4 ${item.perk_protected ? 'border-gold/40' : ''} ${isDragging ? 'shadow-lg shadow-gold/20' : ''}`}
+      data-testid={`admin-queue-item-${item.id}`}
+    >
+      <div className="flex items-center gap-4">
+        {/* Drag Handle */}
+        <div
+          {...attributes}
+          {...listeners}
+          className={`cursor-grab active:cursor-grabbing p-1 rounded ${isPerkProtected ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white/10'}`}
+          title={isPerkProtected ? 'Perk protected - cannot be moved' : 'Drag to reorder'}
+        >
+          <GripVertical className="w-5 h-5 text-white/50" />
+        </div>
+        
+        <div className="relative">
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${item.perk_protected ? 'bg-gold/20' : 'bg-white/5'}`}>
+            <span className="font-cinzel font-bold text-gold">{item.position}</span>
+          </div>
+          {item.perk_protected && (
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-gold rounded-full flex items-center justify-center" title="Perk Protected">
+              <Lock className="w-2.5 h-2.5 text-purple-deep" />
+            </div>
+          )}
+        </div>
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <div className="flex items-center gap-2">
+            <h3 className="font-medium text-white truncate">{item.user_name}</h3>
+            {item.perk_protected && (
+              <span className="text-xs bg-gold/20 text-gold px-1.5 py-0.5 rounded shrink-0">Perk Used</span>
+            )}
+          </div>
+          <p className="text-gold text-sm truncate">{item.song_title} - {item.artist}</p>
+          {item.message_to_admin && (
+            <div className="mt-2 p-2 bg-purple-500/10 border border-purple-500/30 rounded-lg max-w-full overflow-hidden">
+              <p className="text-purple-300 text-xs font-medium mb-1">Message from singer:</p>
+              <p className="text-white/80 text-sm break-words whitespace-pre-wrap">{item.message_to_admin}</p>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Move Up/Down Buttons */}
+          <div className="flex flex-col gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onMoveUp(item.id)}
+              disabled={item.position === 1 || isPerkProtected}
+              data-testid={`move-up-${item.id}`}
+              className="h-6 w-6 p-0 border-white/20 text-white hover:bg-white/10 disabled:opacity-30"
+              title="Move up"
+            >
+              <ChevronUp className="w-4 h-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onMoveDown(item.id)}
+              disabled={item.position === pendingQueueLength || isPerkProtected}
+              data-testid={`move-down-${item.id}`}
+              className="h-6 w-6 p-0 border-white/20 text-white hover:bg-white/10 disabled:opacity-30"
+              title="Move down"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => onSetCurrent(item.id)}
+            data-testid={`set-current-${item.id}`}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            <Play className="w-4 h-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => onRemove(item.id)}
+            data-testid={`remove-${item.id}`}
+          >
+            <XCircle className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const AdminPage = () => {
   const { user } = useAuth();
@@ -30,6 +160,18 @@ const AdminPage = () => {
   const [userSearch, setUserSearch] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
+
+  // DnD Kit sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const fetchData = async () => {
     try {
@@ -112,6 +254,49 @@ const AdminPage = () => {
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to move song');
+    }
+  };
+
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+    
+    if (!over || active.id === over.id) return;
+    
+    const oldIndex = pendingQueue.findIndex(item => item.id === active.id);
+    const newIndex = pendingQueue.findIndex(item => item.id === over.id);
+    
+    if (oldIndex === -1 || newIndex === -1) return;
+    
+    // Check if the dragged item is perk protected
+    const draggedItem = pendingQueue[oldIndex];
+    if (draggedItem.perk_protected && draggedItem.position <= 4) {
+      toast.error('This song used a perk and cannot be moved');
+      return;
+    }
+    
+    // Optimistically update the UI
+    const newQueue = arrayMove(pendingQueue, oldIndex, newIndex);
+    // Update positions
+    const updatedQueue = newQueue.map((item, index) => ({
+      ...item,
+      position: index + 1
+    }));
+    setQueue(prev => {
+      const currentSong = prev.find(item => item.status === 'current');
+      return currentSong ? [currentSong, ...updatedQueue] : updatedQueue;
+    });
+    
+    // Send to backend
+    const newPosition = newIndex + 1;
+    try {
+      await axios.post(`${API}/admin/queue/${active.id}/reorder`, {
+        new_position: newPosition
+      });
+      toast.success(`Moved to position #${newPosition}`);
+      fetchData(); // Refresh to get accurate data
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to reorder');
+      fetchData(); // Revert on error
     }
   };
 
@@ -377,98 +562,45 @@ const AdminPage = () => {
 
             {/* Pending Queue */}
             <div>
-              <h2 className="font-cinzel font-bold text-xl text-white mb-4">
-                Up Next ({pendingQueue.length})
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-cinzel font-bold text-xl text-white">
+                  Up Next ({pendingQueue.length})
+                </h2>
+                <p className="text-white/40 text-sm flex items-center gap-2">
+                  <GripVertical className="w-4 h-4" />
+                  Drag to reorder
+                </p>
+              </div>
               {pendingQueue.length === 0 ? (
                 <div className="glass-card p-8 text-center">
                   <Mic2 className="w-10 h-10 text-white/20 mx-auto mb-3" />
                   <p className="text-white/60">Queue is empty</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {pendingQueue.map((item, index) => (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className={`glass-card p-4 ${item.perk_protected ? 'border-gold/40' : ''}`}
-                      data-testid={`admin-queue-item-${item.id}`}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="relative">
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${item.perk_protected ? 'bg-gold/20' : 'bg-white/5'}`}>
-                            <span className="font-cinzel font-bold text-gold">{item.position}</span>
-                          </div>
-                          {item.perk_protected && (
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-gold rounded-full flex items-center justify-center" title="Perk Protected">
-                              <Lock className="w-2.5 h-2.5 text-purple-deep" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0 overflow-hidden">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-medium text-white truncate">{item.user_name}</h3>
-                            {item.perk_protected && (
-                              <span className="text-xs bg-gold/20 text-gold px-1.5 py-0.5 rounded shrink-0">Perk Used</span>
-                            )}
-                          </div>
-                          <p className="text-gold text-sm truncate">{item.song_title} - {item.artist}</p>
-                          {item.message_to_admin && (
-                            <div className="mt-2 p-2 bg-purple-500/10 border border-purple-500/30 rounded-lg max-w-full overflow-hidden">
-                              <p className="text-purple-300 text-xs font-medium mb-1">Message from singer:</p>
-                              <p className="text-white/80 text-sm break-words whitespace-pre-wrap">{item.message_to_admin}</p>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {/* Move Up/Down Buttons */}
-                          <div className="flex flex-col gap-1">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleMoveUp(item.id)}
-                              disabled={item.position === 1 || (item.perk_protected && item.position <= 4)}
-                              data-testid={`move-up-${item.id}`}
-                              className="h-6 w-6 p-0 border-white/20 text-white hover:bg-white/10 disabled:opacity-30"
-                              title="Move up"
-                            >
-                              <ChevronUp className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleMoveDown(item.id)}
-                              disabled={item.position === pendingQueue.length || (item.perk_protected && item.position <= 4)}
-                              data-testid={`move-down-${item.id}`}
-                              className="h-6 w-6 p-0 border-white/20 text-white hover:bg-white/10 disabled:opacity-30"
-                              title="Move down"
-                            >
-                              <ChevronDown className="w-4 h-4" />
-                            </Button>
-                          </div>
-                          <Button
-                            size="sm"
-                            onClick={() => handleSetCurrent(item.id)}
-                            data-testid={`set-current-${item.id}`}
-                            className="bg-green-600 hover:bg-green-700 text-white"
-                          >
-                            <Play className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleRemoveFromQueue(item.id)}
-                            data-testid={`remove-${item.id}`}
-                          >
-                            <XCircle className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={pendingQueue.map(item => item.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-3">
+                      {pendingQueue.map((item) => (
+                        <SortableQueueItem
+                          key={item.id}
+                          item={item}
+                          pendingQueueLength={pendingQueue.length}
+                          onSetCurrent={handleSetCurrent}
+                          onRemove={handleRemoveFromQueue}
+                          onMoveUp={handleMoveUp}
+                          onMoveDown={handleMoveDown}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
               )}
             </div>
           </TabsContent>

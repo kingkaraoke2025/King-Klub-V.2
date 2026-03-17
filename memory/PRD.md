@@ -46,10 +46,11 @@ A full-stack web app for King Karaoke featuring:
 
 ### December 2025 - Latest Updates
 - **Admin Queue Reordering**: Admins can now manually move songs up/down in the queue
-  - Up/down arrow buttons next to each queue item
+  - **Drag-and-drop**: Grab the grip handle (⋮⋮) and drag songs to any position
+  - Up/down arrow buttons for quick single-position moves
   - Songs that used a perk to enter top 4 positions are "frozen" and cannot be moved
   - Visual indicator (lock icon + "Perk Used" badge) for protected songs
-  - POST /api/admin/queue/{item_id}/move-up and move-down endpoints
+  - POST /api/admin/queue/{item_id}/reorder endpoint for drag-and-drop
 
 - **5 Songs per 30-Minute Window**: Checked-in users can add up to 5 songs per 30-minute rolling window
   - Window resets every 30 minutes from check-in time
