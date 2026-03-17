@@ -172,6 +172,16 @@ const AdminPage = () => {
     }
   };
 
+  const handleCancelBattle = async (challengeId) => {
+    try {
+      const response = await axios.post(`${API}/challenges/${challengeId}/cancel`);
+      toast.success(response.data.message);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to cancel battle');
+    }
+  };
+
   const currentSong = queue.find(item => item.status === 'current');
   const pendingQueue = queue.filter(item => item.status === 'pending');
   
@@ -562,7 +572,7 @@ const AdminPage = () => {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 flex-wrap">
                       {!battle.voting_open ? (
                         <Button
                           onClick={() => handleOpenVoting(battle.id)}
@@ -589,6 +599,15 @@ const AdminPage = () => {
                       >
                         <Trophy className="w-4 h-4 mr-2" />
                         Finalize & Award
+                      </Button>
+                      <Button
+                        onClick={() => handleCancelBattle(battle.id)}
+                        variant="outline"
+                        className="flex-1 border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                        data-testid={`cancel-battle-${battle.id}`}
+                      >
+                        <XCircle className="w-4 h-4 mr-2" />
+                        Cancel (No Votes)
                       </Button>
                     </div>
                   </motion.div>
