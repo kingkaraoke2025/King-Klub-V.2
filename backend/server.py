@@ -1631,6 +1631,18 @@ async def create_challenge(data: ChallengeCreate, user: dict = Depends(get_curre
     
     await db.challenges.insert_one(challenge)
     
+    # Broadcast notification to opponent that they've been challenged
+    await manager.broadcast({
+        "type": "BATTLE_CHALLENGE",
+        "challenge_id": challenge["id"],
+        "challenger_id": user["id"],
+        "challenger_name": user["display_name"],
+        "opponent_id": data.opponent_id,
+        "opponent_name": opponent["display_name"],
+        "challenge_type": data.challenge_type,
+        "challenge_type_name": CHALLENGE_TYPES[data.challenge_type]["name"]
+    })
+    
     # Award first battle badge if needed
     user_badges = list(user.get("badges", []))
     if "first_battle" not in user_badges:
@@ -1830,6 +1842,21 @@ async def finalize_challenge(challenge_id: str, admin: dict = Depends(get_admin_
     )
     
     winner_user = await db.users.find_one({"id": winner_id}, {"_id": 0, "display_name": 1})
+    loser_user = await db.users.find_one({"id": loser_id}, {"_id": 0, "display_name": 1})
+    
+    # Broadcast battle ended notification
+    await manager.broadcast({
+        "type": "BATTLE_ENDED",
+        "challenge_id": challenge_id,
+        "winner_id": winner_id,
+        "winner_name": winner_user["display_name"],
+        "loser_id": loser_id,
+        "loser_name": loser_user["display_name"],
+        "winner_votes": vote_count[winner_id],
+        "loser_votes": vote_count.get(loser_id, 0),
+        "challenge_type": challenge["type"],
+        "challenge_type_name": CHALLENGE_TYPES.get(challenge["type"], {}).get("name", "Battle")
+    })
     
     return {
         "message": f"{winner_user['display_name']} wins the battle!",
@@ -1929,6 +1956,22 @@ async def admin_decide_winner(challenge_id: str, winner_id: str = None, admin: d
     )
     
     winner_user = await db.users.find_one({"id": winner_id}, {"_id": 0, "display_name": 1})
+    loser_user = await db.users.find_one({"id": loser_id}, {"_id": 0, "display_name": 1})
+    
+    # Broadcast battle ended notification (admin decision)
+    await manager.broadcast({
+        "type": "BATTLE_ENDED",
+        "challenge_id": challenge_id,
+        "winner_id": winner_id,
+        "winner_name": winner_user["display_name"],
+        "loser_id": loser_id,
+        "loser_name": loser_user["display_name"],
+        "winner_votes": 0,
+        "loser_votes": 0,
+        "admin_decided": True,
+        "challenge_type": challenge["type"],
+        "challenge_type_name": CHALLENGE_TYPES.get(challenge["type"], {}).get("name", "Battle")
+    })
     
     return {
         "message": f"{winner_user['display_name']} wins! (Admin decision)",

@@ -65,7 +65,13 @@ const AppContent = () => {
   const [voteChallenge, setVoteChallenge] = useState(null);
 
   // Connect to WebSocket for vote notifications
-  useVoteNotification(setVoteChallenge, () => setVoteChallenge(null));
+  // Pass user ID and admin status for personalized notifications
+  useVoteNotification(
+    setVoteChallenge, 
+    () => setVoteChallenge(null), 
+    user?.is_admin || false,
+    user?.id || null
+  );
 
   // Check for open voting on mount
   useEffect(() => {

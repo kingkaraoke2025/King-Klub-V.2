@@ -42,6 +42,7 @@ A full-stack web app for King Karaoke featuring:
 | 5 Songs per 30-min Window | ✅ Complete | P1 |
 | Admin Queue Reordering | ✅ Complete | P1 |
 | Admin Password Reset | ✅ Complete | P1 |
+| Battle Notifications | ✅ Complete | P1 |
 
 ## What's Been Implemented
 
