@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -14,6 +14,8 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectUrl = searchParams.get('redirect');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,7 +24,8 @@ const LoginPage = () => {
     try {
       await login(email, password);
       toast.success('Welcome back to the Kingdom!');
-      navigate('/dashboard');
+      // Redirect to the original destination or dashboard
+      navigate(redirectUrl || '/dashboard');
     } catch (error) {
       const message = error.response?.data?.detail || 'Login failed. Please try again.';
       toast.error(message);
@@ -136,7 +139,7 @@ const LoginPage = () => {
           <p className="mt-8 text-center text-white/60">
             New to the Kingdom?{' '}
             <Link 
-              to="/register" 
+              to={redirectUrl ? `/register?redirect=${encodeURIComponent(redirectUrl)}` : '/register'}
               data-testid="register-link"
               className="text-gold hover:underline font-medium"
             >

@@ -19,6 +19,7 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
+  const redirectUrl = searchParams.get('redirect');
 
   // Check for referral code in URL
   useEffect(() => {
@@ -46,7 +47,8 @@ const RegisterPage = () => {
     try {
       await register(email, password, displayName, titlePreference, referralCode || null);
       toast.success('Welcome to the Kingdom, noble Peasant!');
-      navigate('/dashboard');
+      // Redirect to the original destination or dashboard
+      navigate(redirectUrl || '/dashboard');
     } catch (error) {
       const message = error.response?.data?.detail || 'Registration failed. Please try again.';
       toast.error(message);
@@ -239,7 +241,7 @@ const RegisterPage = () => {
           <p className="mt-8 text-center text-white/60">
             Already a member?{' '}
             <Link 
-              to="/login" 
+              to={redirectUrl ? `/login?redirect=${encodeURIComponent(redirectUrl)}` : '/login'}
               data-testid="login-link"
               className="text-gold hover:underline font-medium"
             >
