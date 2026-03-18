@@ -1257,6 +1257,37 @@ async def delete_user(user_id: str, admin_user: dict = Depends(get_admin_user)):
         "deleted_user_id": user_id
     }
 
+class PasswordResetRequest(BaseModel):
+    new_password: str
+
+@api_router.post("/admin/users/{user_id}/reset-password")
+async def reset_user_password(user_id: str, data: PasswordResetRequest, admin_user: dict = Depends(get_admin_user)):
+    """Admin reset a user's password"""
+    # Find the target user
+    target = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Cannot reset admin passwords through this endpoint
+    if target.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Cannot reset admin passwords through this endpoint")
+    
+    # Validate password length
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    # Hash and update the password
+    hashed_password = hash_password(data.new_password)
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"password": hashed_password}}
+    )
+    
+    return {
+        "message": f"Password reset successful for '{target['display_name']}'",
+        "user_id": user_id
+    }
+
 
 # ==================== STATS ====================
 @api_router.get("/stats")

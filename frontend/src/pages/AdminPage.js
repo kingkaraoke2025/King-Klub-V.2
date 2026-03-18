@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { 
   Shield, Users, Mic2, CheckCircle, XCircle, Play, 
   Plus, Minus, Crown, RefreshCw, UserCheck, Star, Gift, Search,
-  Swords, Vote, Trophy, Trash2, AlertTriangle, ChevronUp, ChevronDown, Lock, GripVertical
+  Swords, Vote, Trophy, Trash2, AlertTriangle, ChevronUp, ChevronDown, Lock, GripVertical, KeyRound
 } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/context/AuthContext';
@@ -160,6 +160,10 @@ const AdminPage = () => {
   const [userSearch, setUserSearch] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
+  const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
+  const [userToResetPassword, setUserToResetPassword] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   // DnD Kit sensors
   const sensors = useSensors(
@@ -364,6 +368,36 @@ const AdminPage = () => {
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to delete user');
+    }
+  };
+
+  const openResetPasswordDialog = (u) => {
+    setUserToResetPassword(u);
+    setNewPassword('');
+    setResetPasswordDialogOpen(true);
+  };
+
+  const handleResetPassword = async () => {
+    if (!userToResetPassword || !newPassword) return;
+    
+    if (newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    
+    setResettingPassword(true);
+    try {
+      const response = await axios.post(`${API}/admin/users/${userToResetPassword.id}/reset-password`, {
+        new_password: newPassword
+      });
+      toast.success(response.data.message);
+      setResetPasswordDialogOpen(false);
+      setUserToResetPassword(null);
+      setNewPassword('');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to reset password');
+    } finally {
+      setResettingPassword(false);
     }
   };
 
@@ -671,6 +705,19 @@ const AdminPage = () => {
                           <UserCheck className="w-4 h-4" />
                         </Button>
                       )}
+                      {/* Reset Password */}
+                      {u.id !== user?.id && !u.is_admin && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openResetPasswordDialog(u)}
+                          data-testid={`reset-password-${u.id}`}
+                          className="h-8 w-8 p-0 border-blue-500/30 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300"
+                          title="Reset password"
+                        >
+                          <KeyRound className="w-4 h-4" />
+                        </Button>
+                      )}
                       {/* Delete User */}
                       {u.id !== user?.id && (
                         <Button
@@ -950,6 +997,67 @@ const AdminPage = () => {
             >
               <Trash2 className="w-4 h-4 mr-2" />
               Delete User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={resetPasswordDialogOpen} onOpenChange={setResetPasswordDialogOpen}>
+        <DialogContent className="bg-royal-paper border-white/10 text-white">
+          <DialogHeader>
+            <DialogTitle className="font-cinzel text-xl text-blue-400 flex items-center gap-2">
+              <KeyRound className="w-5 h-5" />
+              Reset Password
+            </DialogTitle>
+            <DialogDescription className="text-white/70">
+              Set a new password for this user.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {userToResetPassword && (
+            <div className="py-4 space-y-4">
+              <p className="text-white">
+                Reset password for <span className="font-bold text-gold">{userToResetPassword.display_name}</span>
+              </p>
+              <p className="text-white/50 text-sm">
+                ({userToResetPassword.email})
+              </p>
+              
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">New Password</label>
+                <input
+                  type="text"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password (min 6 characters)"
+                  data-testid="new-password-input"
+                  className="w-full royal-input"
+                  autoComplete="off"
+                />
+                <p className="text-white/40 text-xs mt-1">
+                  The user will need to use this password to log in.
+                </p>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter className="gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setResetPasswordDialogOpen(false)}
+              className="border-white/20 text-white hover:bg-white/10"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleResetPassword}
+              disabled={!newPassword || newPassword.length < 6 || resettingPassword}
+              className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+              data-testid="confirm-reset-password-btn"
+            >
+              <KeyRound className="w-4 h-4 mr-2" />
+              {resettingPassword ? 'Resetting...' : 'Reset Password'}
             </Button>
           </DialogFooter>
         </DialogContent>
