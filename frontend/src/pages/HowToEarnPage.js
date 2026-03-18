@@ -223,21 +223,20 @@ const HowToEarnPage = () => {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: idx * 0.03 }}
-                    className="flex items-center justify-between p-4 hover:bg-white/5 transition-colors"
+                    className="p-4 hover:bg-white/5 transition-colors"
                     data-testid={`action-${action.id}`}
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
                         <Star className="w-5 h-5 text-gold" />
                       </div>
-                      <div>
-                        <h3 className="font-medium text-white">{action.name}</h3>
-                        <p className="text-white/50 text-sm">{action.description}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="font-medium text-white text-sm sm:text-base">{action.name}</h3>
+                          <span className="text-gold font-bold text-lg sm:text-xl whitespace-nowrap">+{action.points}</span>
+                        </div>
+                        <p className="text-white/50 text-xs sm:text-sm mt-1">{action.description}</p>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-gold font-bold text-xl">+{action.points}</span>
-                      <p className="text-white/40 text-xs">points</p>
                     </div>
                   </motion.div>
                 ))}
@@ -268,18 +267,18 @@ const HowToEarnPage = () => {
                   className="glass-card overflow-hidden"
                 >
                   <div className={`p-4 border-b border-white/10 bg-gradient-to-r ${config.color} bg-opacity-20`}>
-                    <div className="flex items-center justify-between">
-                      <h2 className="font-cinzel text-xl font-bold text-white flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <h2 className="font-cinzel text-lg sm:text-xl font-bold text-white flex items-center gap-2">
                         <CategoryIcon className="w-5 h-5" />
                         {config.label} Badges
                       </h2>
-                      <div className="text-right">
-                        <span className="text-white/80 text-sm">{categoryBadges.length} badges</span>
-                        <span className="text-gold ml-2">+{totalCategoryPoints} pts total</span>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-white/80">{categoryBadges.length} badges</span>
+                        <span className="text-gold font-medium">+{totalCategoryPoints} pts total</span>
                       </div>
                     </div>
                   </div>
-                  <div className="grid md:grid-cols-2 gap-4 p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
                     {categoryBadges.map((badge, idx) => {
                       const BadgeIcon = iconMap[badge.icon] || Star;
                       return (
@@ -288,19 +287,20 @@ const HowToEarnPage = () => {
                           initial={{ opacity: 0, scale: 0.95 }}
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ delay: idx * 0.05 }}
-                          className="flex items-center gap-4 p-4 rounded-lg bg-white/5 border border-white/10 hover:border-gold/30 transition-all"
+                          className="p-4 rounded-lg bg-white/5 border border-white/10 hover:border-gold/30 transition-all"
                           data-testid={`badge-${badge.id}`}
                         >
-                          <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${config.color} flex items-center justify-center flex-shrink-0`}>
-                            <BadgeIcon className="w-6 h-6 text-white" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-cinzel font-bold text-white truncate">{badge.name}</h3>
-                            <p className="text-white/50 text-sm">{badge.description}</p>
-                          </div>
-                          <div className="text-right flex-shrink-0">
-                            <span className="text-gold font-bold">+{badge.points_reward}</span>
-                            <p className="text-white/40 text-xs">bonus</p>
+                          <div className="flex items-start gap-3">
+                            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br ${config.color} flex items-center justify-center flex-shrink-0`}>
+                              <BadgeIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <h3 className="font-cinzel font-bold text-white text-sm sm:text-base">{badge.name}</h3>
+                                <span className="text-gold font-bold text-sm sm:text-base whitespace-nowrap">+{badge.points_reward}</span>
+                              </div>
+                              <p className="text-white/50 text-xs sm:text-sm mt-1">{badge.description}</p>
+                            </div>
                           </div>
                         </motion.div>
                       );
