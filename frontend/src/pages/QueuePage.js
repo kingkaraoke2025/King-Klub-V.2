@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic2, Clock, Plus, X, Music, User, Loader2, MessageSquare, Zap, Crown, Sparkles, Timer, AlertCircle } from 'lucide-react';
+import { Mic2, Clock, Plus, X, Music, User, Loader2, MessageSquare, Zap, Crown, Sparkles, Timer, AlertCircle, QrCode, CheckCircle2 } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -138,6 +138,54 @@ const QueuePage = () => {
   return (
     <Layout>
       <div className="space-y-8" data-testid="queue-page">
+        {/* Check-in Status Banner */}
+        {queueStatus && !queueStatus.checked_in && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-card p-4 border-orange-500/50 bg-orange-500/10"
+          >
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-orange-500/20 rounded-xl">
+                <QrCode className="w-6 h-6 text-orange-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-orange-400">Check-in Required</h3>
+                <p className="text-white/70 text-sm">
+                  Scan today's QR code at the venue to add songs to the queue. QR codes reset daily at 4 AM.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Checked-in Status with Songs Remaining */}
+        {queueStatus?.checked_in && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-card p-4 border-green-500/30 bg-green-500/5"
+          >
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-4">
+                <div className="p-2 bg-green-500/20 rounded-lg">
+                  <CheckCircle2 className="w-5 h-5 text-green-400" />
+                </div>
+                <div>
+                  <p className="text-green-400 font-medium">Checked In</p>
+                  <p className="text-white/60 text-sm">
+                    {queueStatus.songs_remaining} songs remaining this window
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-white/60 text-sm">
+                <Timer className="w-4 h-4" />
+                <span>Resets in {queueStatus.window_resets_in} min</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -234,12 +282,13 @@ const QueuePage = () => {
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
                 <Button
-                  disabled={!!userInQueue}
+                  disabled={!!userInQueue || !queueStatus?.checked_in || !queueStatus?.can_add_songs}
                   data-testid="add-to-queue-btn"
                   className="btn-gold"
+                  title={!queueStatus?.checked_in ? 'Please scan QR code first' : !queueStatus?.can_add_songs ? queueStatus?.reason : ''}
                 >
                   <Plus className="w-5 h-5 mr-2" />
-                  {userInQueue ? 'Already in Queue' : 'Join Queue'}
+                  {userInQueue ? 'Already in Queue' : !queueStatus?.checked_in ? 'Scan QR First' : !queueStatus?.can_add_songs ? 'Limit Reached' : 'Join Queue'}
                 </Button>
               </DialogTrigger>
             <DialogContent className="bg-royal-paper border-white/10 text-white">
