@@ -76,18 +76,27 @@ const QueuePage = () => {
 
     setAddingToQueue(true);
     try {
-      await axios.post(`${API}/queue`, {
+      const response = await axios.post(`${API}/queue`, {
         song_title: songTitle,
         artist: artist,
         message_to_admin: messageToAdmin.trim() || null
       });
-      toast.success('Added to queue! Get ready to shine!');
+      
+      // Show success with songs remaining info
+      const songsRemaining = response.data.songs_remaining;
+      if (songsRemaining > 0) {
+        toast.success(`Added to queue! ${songsRemaining} songs remaining this window.`);
+      } else {
+        toast.success('Added to queue! You\'ve used all 5 songs for this window.');
+      }
+      
       setSongTitle('');
       setArtist('');
       setMessageToAdmin('');
       setDialogOpen(false);
       fetchQueue();
       fetchPerkStatus();
+      fetchQueueStatus(); // Refresh queue status to update songs remaining
     } catch (error) {
       const message = error.response?.data?.detail || 'Failed to add to queue';
       toast.error(message);
@@ -282,13 +291,13 @@ const QueuePage = () => {
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
                 <Button
-                  disabled={!!userInQueue || !queueStatus?.checked_in || !queueStatus?.can_add_songs}
+                  disabled={!queueStatus?.checked_in || !queueStatus?.can_add_songs}
                   data-testid="add-to-queue-btn"
                   className="btn-gold"
                   title={!queueStatus?.checked_in ? 'Please scan QR code first' : !queueStatus?.can_add_songs ? queueStatus?.reason : ''}
                 >
                   <Plus className="w-5 h-5 mr-2" />
-                  {userInQueue ? 'Already in Queue' : !queueStatus?.checked_in ? 'Scan QR First' : !queueStatus?.can_add_songs ? 'Limit Reached' : 'Join Queue'}
+                  {!queueStatus?.checked_in ? 'Scan QR First' : !queueStatus?.can_add_songs ? 'Limit Reached' : 'Add Song'}
                 </Button>
               </DialogTrigger>
             <DialogContent className="bg-royal-paper border-white/10 text-white">
