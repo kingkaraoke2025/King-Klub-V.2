@@ -49,7 +49,14 @@ A full-stack web app for King Karaoke featuring:
 
 ## What's Been Implemented
 
-### December 2025 - Latest Updates
+### March 2026 - Latest Updates
+- **WebSocket Battle Notifications Fix**: Fixed critical bug where battle notifications weren't being received
+  - Issue: React StrictMode was causing WebSocket connections to close immediately after opening
+  - Fix: Added `isConnectingRef` and `shouldReconnectRef` flags in `useVoteNotification.js` to handle double-mount/unmount cycles
+  - Verified: WebSocket now connects successfully and battle notifications (BATTLE_CHALLENGE, CHALLENGE_ACCEPTED, BATTLE_ENDED) are properly received
+  - Test report: `/app/test_reports/iteration_4.json`
+
+### December 2025 - Previous Updates
 - **Admin Queue Reordering**: Admins can now manually move songs up/down in the queue
   - **Drag-and-drop**: Grab the grip handle (⋮⋮) and drag songs to any position
   - Up/down arrow buttons for quick single-position moves
@@ -135,6 +142,7 @@ A full-stack web app for King Karaoke featuring:
 - [ ] Mobile app version
 
 ## Pending Issues
+- ~~WebSocket battle notifications not working~~ (FIXED March 2026)
 - User reported "uncaught runtime errors" after admin login (not reproduced - monitor for recurrence)
 
 ## Next Tasks
@@ -147,6 +155,7 @@ A full-stack web app for King Karaoke featuring:
 ## Test Reports
 - `/app/test_reports/iteration_1.json` - Battle system tests
 - `/app/test_reports/iteration_3.json` - Queue song limit tests (33/33 passed)
+- `/app/test_reports/iteration_4.json` - WebSocket notification tests (100% pass rate)
 
 ## Tech Stack
 - **Frontend**: React 19, Tailwind CSS, Framer Motion, Shadcn/UI
