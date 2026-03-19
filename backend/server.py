@@ -2088,6 +2088,18 @@ async def get_open_voting_challenge():
     challenger = await db.users.find_one({"id": challenge["challenger_id"]}, {"_id": 0, "display_name": 1})
     opponent = await db.users.find_one({"id": challenge["opponent_id"]}, {"_id": 0, "display_name": 1})
     
+    # Check if voting has expired
+    voting_ends_at = challenge.get("voting_ends_at")
+    if voting_ends_at:
+        end_time = datetime.fromisoformat(voting_ends_at.replace('Z', '+00:00'))
+        if datetime.now(timezone.utc) > end_time:
+            # Voting has expired, close it
+            await db.challenges.update_one(
+                {"id": challenge["id"]},
+                {"$set": {"voting_open": False}}
+            )
+            return {"voting_open": False, "challenge": None}
+    
     return {
         "voting_open": True,
         "challenge": {
@@ -2099,7 +2111,8 @@ async def get_open_voting_challenge():
             "challengeType": challenge["type"],
             "typeName": CHALLENGE_TYPES.get(challenge["type"], {}).get("name", "Battle"),
             "votes": len(challenge.get("votes", [])),
-            "voting_started_at": challenge.get("voting_started_at")
+            "votingStartedAt": challenge.get("voting_started_at"),
+            "votingEndsAt": challenge.get("voting_ends_at")
         }
     }
 
@@ -2165,13 +2178,22 @@ async def open_voting(challenge_id: str, admin: dict = Depends(get_admin_user)):
     challenger = await db.users.find_one({"id": challenge["challenger_id"]}, {"_id": 0, "display_name": 1})
     opponent = await db.users.find_one({"id": challenge["opponent_id"]}, {"_id": 0, "display_name": 1})
     
-    # Mark voting as open
+    # Calculate voting end time (3 minutes from now)
+    voting_duration_seconds = 180  # 3 minutes
+    voting_started_at = datetime.now(timezone.utc)
+    voting_ends_at = voting_started_at + timedelta(seconds=voting_duration_seconds)
+    
+    # Mark voting as open with end time
     await db.challenges.update_one(
         {"id": challenge_id},
-        {"$set": {"voting_open": True, "voting_started_at": datetime.now(timezone.utc).isoformat()}}
+        {"$set": {
+            "voting_open": True, 
+            "voting_started_at": voting_started_at.isoformat(),
+            "voting_ends_at": voting_ends_at.isoformat()
+        }}
     )
     
-    # Broadcast to all connected clients
+    # Broadcast to all connected clients with the server end time
     await manager.broadcast({
         "type": "OPEN_VOTING",
         "challenge": {
@@ -2181,7 +2203,9 @@ async def open_voting(challenge_id: str, admin: dict = Depends(get_admin_user)):
             "challengerName": challenger["display_name"] if challenger else "Unknown",
             "opponentName": opponent["display_name"] if opponent else "Unknown",
             "challengeType": challenge["type"],
-            "typeName": CHALLENGE_TYPES.get(challenge["type"], {}).get("name", "Battle")
+            "typeName": CHALLENGE_TYPES.get(challenge["type"], {}).get("name", "Battle"),
+            "votingEndsAt": voting_ends_at.isoformat(),
+            "votingDuration": voting_duration_seconds
         }
     })
     

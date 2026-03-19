@@ -10,12 +10,21 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const VotePopup = ({ challenge, onVote, onClose, userId }) => {
-  const [timeLeft, setTimeLeft] = useState(180); // 3 minutes
+  const [timeLeft, setTimeLeft] = useState(0);
   const [voting, setVoting] = useState(false);
   const [voted, setVoted] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const hasPlayedOpenSound = useRef(false);
-  const lastTickTime = useRef(0);
+  const votingEndsAtRef = useRef(null);
+
+  // Calculate time left from server's end time
+  const calculateTimeLeft = (endTimeStr) => {
+    if (!endTimeStr) return 0;
+    const endTime = new Date(endTimeStr);
+    const now = new Date();
+    const diff = Math.max(0, Math.floor((endTime - now) / 1000));
+    return diff;
+  };
 
   // Play battle start sound when popup opens
   useEffect(() => {
@@ -32,31 +41,41 @@ const VotePopup = ({ challenge, onVote, onClose, userId }) => {
   useEffect(() => {
     if (!challenge) return;
 
-    // Reset timer when new challenge opens
-    setTimeLeft(180);
+    // Get the voting end time from the challenge data
+    const votingEndsAt = challenge.votingEndsAt;
+    votingEndsAtRef.current = votingEndsAt;
+    
+    // Calculate initial time left based on server end time
+    const initialTimeLeft = calculateTimeLeft(votingEndsAt);
+    setTimeLeft(initialTimeLeft);
     setVoted(false);
 
+    // If voting has already ended, don't start timer
+    if (initialTimeLeft <= 0) {
+      soundEffects.playVotingClosed();
+      return;
+    }
+
     const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          soundEffects.playVotingClosed();
-          return 0;
+      const remaining = calculateTimeLeft(votingEndsAtRef.current);
+      setTimeLeft(remaining);
+      
+      if (remaining <= 0) {
+        clearInterval(timer);
+        soundEffects.playVotingClosed();
+        return;
+      }
+      
+      // Play warning sounds
+      if (soundEnabled) {
+        if (remaining <= 10 && remaining > 0) {
+          // Last 10 seconds - urgent warning every second
+          soundEffects.playUrgentWarning();
+        } else if (remaining <= 30 && remaining % 5 === 0) {
+          // Last 30 seconds - tick every 5 seconds
+          soundEffects.playTimerTick();
         }
-        
-        // Play warning sounds
-        if (soundEnabled) {
-          if (prev <= 10 && prev > 0) {
-            // Last 10 seconds - urgent warning every second
-            soundEffects.playUrgentWarning();
-          } else if (prev <= 30 && prev % 5 === 0) {
-            // Last 30 seconds - tick every 5 seconds
-            soundEffects.playTimerTick();
-          }
-        }
-        
-        return prev - 1;
-      });
+      }
     }, 1000);
 
     return () => clearInterval(timer);
