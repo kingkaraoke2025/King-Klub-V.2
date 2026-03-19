@@ -202,8 +202,23 @@ const AdminPage = () => {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 15000);
-    return () => clearInterval(interval);
+    
+    // Listen for real-time updates via WebSocket
+    const handleQueueUpdate = () => {
+      fetchData();
+    };
+    
+    const handlePointsUpdate = () => {
+      fetchData();
+    };
+    
+    window.addEventListener('queueUpdated', handleQueueUpdate);
+    window.addEventListener('pointsUpdated', handlePointsUpdate);
+    
+    return () => {
+      window.removeEventListener('queueUpdated', handleQueueUpdate);
+      window.removeEventListener('pointsUpdated', handlePointsUpdate);
+    };
   }, []);
 
   const handleRefresh = () => {

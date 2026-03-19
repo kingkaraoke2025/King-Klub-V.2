@@ -33,26 +33,39 @@ const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [statsRes, accompRes, referralRes] = await Promise.all([
-          axios.get(`${API}/stats`),
-          axios.get(`${API}/accomplishments`),
-          axios.get(`${API}/auth/referral-stats`)
-        ]);
-        setStats(statsRes.data);
-        setRecentAccomplishments(accompRes.data.slice(0, 3));
-        setReferralStats(referralRes.data);
-      } catch (error) {
-        console.error('Failed to fetch dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchData = async () => {
+    try {
+      const [statsRes, accompRes, referralRes] = await Promise.all([
+        axios.get(`${API}/stats`),
+        axios.get(`${API}/accomplishments`),
+        axios.get(`${API}/auth/referral-stats`)
+      ]);
+      setStats(statsRes.data);
+      setRecentAccomplishments(accompRes.data.slice(0, 3));
+      setReferralStats(referralRes.data);
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
     refreshUser();
+    
+    // Listen for real-time points updates via WebSocket
+    const handlePointsUpdate = (event) => {
+      // Refresh dashboard when points change (especially if it's the current user)
+      fetchData();
+      refreshUser();
+    };
+    
+    window.addEventListener('pointsUpdated', handlePointsUpdate);
+    
+    return () => {
+      window.removeEventListener('pointsUpdated', handlePointsUpdate);
+    };
   }, []);
 
   const progressToNextRank = user?.next_rank

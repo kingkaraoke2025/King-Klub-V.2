@@ -43,6 +43,7 @@ A full-stack web app for King Karaoke featuring:
 | Admin Queue Reordering | ✅ Complete | P1 |
 | Admin Password Reset | ✅ Complete | P1 |
 | Battle Notifications | ✅ Complete | P1 |
+| Real-Time Updates | ✅ Complete | P1 |
 
 ## What's Been Implemented
 

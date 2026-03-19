@@ -58,13 +58,18 @@ const QueuePage = () => {
     fetchQueue();
     fetchPerkStatus();
     fetchQueueStatus();
-    // Poll for updates every 10 seconds
-    const interval = setInterval(() => {
+    
+    // Listen for real-time queue updates via WebSocket
+    const handleQueueUpdate = () => {
       fetchQueue();
-      fetchPerkStatus();
       fetchQueueStatus();
-    }, 10000);
-    return () => clearInterval(interval);
+    };
+    
+    window.addEventListener('queueUpdated', handleQueueUpdate);
+    
+    return () => {
+      window.removeEventListener('queueUpdated', handleQueueUpdate);
+    };
   }, []);
 
   const handleAddToQueue = async (e) => {

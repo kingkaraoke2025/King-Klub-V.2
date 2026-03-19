@@ -31,19 +31,30 @@ const LeaderboardPage = () => {
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
-      try {
-        const response = await axios.get(`${API}/leaderboard`);
-        setLeaderboard(response.data);
-      } catch (error) {
-        console.error('Failed to fetch leaderboard:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchLeaderboard = async () => {
+    try {
+      const response = await axios.get(`${API}/leaderboard`);
+      setLeaderboard(response.data);
+    } catch (error) {
+      console.error('Failed to fetch leaderboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchLeaderboard();
+    
+    // Listen for real-time points updates via WebSocket
+    const handlePointsUpdate = () => {
+      fetchLeaderboard();
+    };
+    
+    window.addEventListener('pointsUpdated', handlePointsUpdate);
+    
+    return () => {
+      window.removeEventListener('pointsUpdated', handlePointsUpdate);
+    };
   }, []);
 
   const userPosition = leaderboard.findIndex(entry => entry.id === user?.id) + 1;

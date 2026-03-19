@@ -1,7 +1,14 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 
-const useVoteNotification = (setVoteChallenge, onVotingClosed, isAdmin = false, userId = null) => {
+const useVoteNotification = (
+  setVoteChallenge, 
+  onVotingClosed, 
+  isAdmin = false, 
+  userId = null,
+  onQueueUpdate = null,
+  onPointsUpdate = null
+) => {
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
 
@@ -48,6 +55,26 @@ const useVoteNotification = (setVoteChallenge, onVotingClosed, isAdmin = false, 
                 onVotingClosed(data.challengeId);
               }
               setVoteChallenge(null);
+              break;
+            
+            case 'QUEUE_UPDATED':
+              console.log('Queue updated:', data.action);
+              // Trigger queue refresh in any component listening
+              if (onQueueUpdate) {
+                onQueueUpdate(data);
+              }
+              // Dispatch custom event for components not using the hook directly
+              window.dispatchEvent(new CustomEvent('queueUpdated', { detail: data }));
+              break;
+              
+            case 'POINTS_UPDATED':
+              console.log('Points updated for user:', data.user_id);
+              // Trigger points/leaderboard refresh
+              if (onPointsUpdate) {
+                onPointsUpdate(data);
+              }
+              // Dispatch custom event for components not using the hook directly
+              window.dispatchEvent(new CustomEvent('pointsUpdated', { detail: data }));
               break;
               
             case 'BATTLE_CHALLENGE':
@@ -156,7 +183,7 @@ const useVoteNotification = (setVoteChallenge, onVotingClosed, isAdmin = false, 
       // Retry connection after 5 seconds
       reconnectTimeoutRef.current = setTimeout(connect, 5000);
     }
-  }, [setVoteChallenge, onVotingClosed, isAdmin, userId]);
+  }, [setVoteChallenge, onVotingClosed, isAdmin, userId, onQueueUpdate, onPointsUpdate]);
 
   useEffect(() => {
     connect();

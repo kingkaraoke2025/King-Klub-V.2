@@ -576,6 +576,13 @@ async def add_to_queue(data: AddSongRequest, user: dict = Depends(get_current_us
     if "_id" in queue_item:
         del queue_item["_id"]
     
+    # Broadcast queue update to all connected clients
+    await manager.broadcast({
+        "type": "QUEUE_UPDATED",
+        "action": "song_added",
+        "item": queue_item
+    })
+    
     # For admins, return unlimited values
     if is_admin:
         return {
@@ -708,6 +715,13 @@ async def remove_from_queue(item_id: str, user: dict = Depends(get_current_user)
             {"id": q_item["id"]},
             {"$set": {"position": q_item["position"] - 1, "estimated_wait": (q_item["position"] - 2) * 4}}
         )
+    
+    # Broadcast queue update
+    await manager.broadcast({
+        "type": "QUEUE_UPDATED",
+        "action": "song_removed",
+        "item_id": item_id
+    })
     
     return {"message": "Removed from queue"}
 
@@ -1024,6 +1038,13 @@ async def set_current_song(item_id: str, user: dict = Depends(get_admin_user)):
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Queue item not found")
     
+    # Broadcast queue update
+    await manager.broadcast({
+        "type": "QUEUE_UPDATED",
+        "action": "song_now_playing",
+        "item_id": item_id
+    })
+    
     return {"message": "Current song updated"}
 
 @api_router.post("/admin/queue/{item_id}/move-up")
@@ -1069,6 +1090,12 @@ async def move_song_up(item_id: str, admin: dict = Depends(get_admin_user)):
         {"id": item_id},
         {"$set": {"position": new_position, "estimated_wait": (new_position - 1) * 4}}
     )
+    
+    # Broadcast queue update
+    await manager.broadcast({
+        "type": "QUEUE_UPDATED",
+        "action": "queue_reordered"
+    })
     
     return {
         "message": f"Moved '{item['song_title']}' from #{current_position} to #{new_position}",
@@ -1119,6 +1146,12 @@ async def move_song_down(item_id: str, admin: dict = Depends(get_admin_user)):
         {"id": item_id},
         {"$set": {"position": new_position, "estimated_wait": (new_position - 1) * 4}}
     )
+    
+    # Broadcast queue update
+    await manager.broadcast({
+        "type": "QUEUE_UPDATED",
+        "action": "queue_reordered"
+    })
     
     return {
         "message": f"Moved '{item['song_title']}' from #{current_position} to #{new_position}",
@@ -1200,6 +1233,12 @@ async def reorder_song(item_id: str, data: ReorderRequest, admin: dict = Depends
             {"$set": {"estimated_wait": (song["position"] - 1) * 4}}
         )
     
+    # Broadcast queue update
+    await manager.broadcast({
+        "type": "QUEUE_UPDATED",
+        "action": "queue_reordered"
+    })
+    
     return {
         "message": f"Moved '{item['song_title']}' from #{current_position} to #{new_position}",
         "old_position": current_position,
@@ -1258,6 +1297,13 @@ async def adjust_points(user_id: str, points: int, user: dict = Depends(get_admi
     )
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # Broadcast points/leaderboard update
+    await manager.broadcast({
+        "type": "POINTS_UPDATED",
+        "user_id": user_id
+    })
+    
     return {"message": f"Added {points} points"}
 
 @api_router.post("/admin/users/{user_id}/toggle-admin")
@@ -2314,6 +2360,12 @@ async def perform_checkin(venue_code: str, user: dict = Depends(get_current_user
                 "badge_name": BADGES[badge_id]["name"],
                 "earned_at": datetime.now(timezone.utc).isoformat()
             })
+    
+    # Broadcast points/leaderboard update after check-in
+    await manager.broadcast({
+        "type": "POINTS_UPDATED",
+        "user_id": user["id"]
+    })
     
     return {
         "success": True,
