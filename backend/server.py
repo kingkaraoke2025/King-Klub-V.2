@@ -2166,14 +2166,13 @@ async def get_ranks():
     return RANKS
 
 # ==================== WEBSOCKET & LIVE VOTING ====================
+# WebSocket endpoint for /ws path (fallback)
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            # Keep connection alive, wait for messages
             data = await websocket.receive_text()
-            # Echo back or handle ping/pong
             if data == "ping":
                 await websocket.send_text("pong")
     except WebSocketDisconnect:
@@ -2457,6 +2456,18 @@ async def root():
 
 # Include router
 app.include_router(api_router)
+
+# WebSocket endpoint - must be after router is included
+@app.websocket("/api/ws")
+async def websocket_endpoint_api(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
 # CORS
 app.add_middleware(

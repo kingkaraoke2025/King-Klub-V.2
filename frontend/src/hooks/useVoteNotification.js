@@ -13,17 +13,41 @@ const useVoteNotification = (
 ) => {
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
+  const isConnectingRef = useRef(false);
+  const shouldReconnectRef = useRef(true);
 
   const connect = useCallback(() => {
-    // Determine WebSocket URL based on current location
+    // Prevent multiple simultaneous connection attempts
+    if (isConnectingRef.current) {
+      console.log('WebSocket connection already in progress, skipping');
+      return;
+    }
+    
+    // Don't reconnect if we shouldn't (component unmounted)
+    if (!shouldReconnectRef.current) {
+      console.log('WebSocket reconnection disabled, skipping');
+      return;
+    }
+    
+    // Close any existing connection first
+    if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) {
+      console.log('Closing existing WebSocket connection');
+      wsRef.current.close();
+    }
+    
+    isConnectingRef.current = true;
+    
+    // Determine WebSocket URL - use /api/ws for proper routing through ingress
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const wsUrl = `${protocol}//${window.location.host}/api/ws`;
+    console.log('Attempting WebSocket connection to:', wsUrl);
 
     try {
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('WebSocket connected successfully to:', wsUrl);
+        isConnectingRef.current = false;
         // Send ping every 30 seconds to keep connection alive
         const pingInterval = setInterval(() => {
           if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -210,29 +234,39 @@ const useVoteNotification = (
         }
       };
 
-      wsRef.current.onclose = () => {
-        console.log('WebSocket disconnected');
+      wsRef.current.onclose = (event) => {
+        console.log('WebSocket disconnected. Code:', event.code, 'Reason:', event.reason, 'Was clean:', event.wasClean);
+        isConnectingRef.current = false;
         if (wsRef.current?.pingInterval) {
           clearInterval(wsRef.current.pingInterval);
         }
-        // Attempt to reconnect after 3 seconds
-        reconnectTimeoutRef.current = setTimeout(connect, 3000);
+        // Attempt to reconnect after 3 seconds if we should
+        if (shouldReconnectRef.current) {
+          reconnectTimeoutRef.current = setTimeout(connect, 3000);
+        }
       };
 
       wsRef.current.onerror = (error) => {
         console.error('WebSocket error:', error);
+        console.error('WebSocket readyState:', wsRef.current?.readyState);
+        isConnectingRef.current = false;
       };
     } catch (error) {
       console.error('Failed to connect WebSocket:', error);
-      // Retry connection after 5 seconds
-      reconnectTimeoutRef.current = setTimeout(connect, 5000);
+      isConnectingRef.current = false;
+      // Retry connection after 5 seconds if we should
+      if (shouldReconnectRef.current) {
+        reconnectTimeoutRef.current = setTimeout(connect, 5000);
+      }
     }
   }, [setVoteChallenge, onVotingClosed, isAdmin, userId, onQueueUpdate, onPointsUpdate, onBattleUpdate]);
 
   useEffect(() => {
+    shouldReconnectRef.current = true;
     connect();
 
     return () => {
+      shouldReconnectRef.current = false;
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }

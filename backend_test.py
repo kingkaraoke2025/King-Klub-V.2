@@ -7,7 +7,7 @@ from datetime import datetime
 import uuid
 
 class KingKlubAPITester:
-    def __init__(self, base_url="https://loyalty-queue-hub.preview.emergentagent.com"):
+    def __init__(self, base_url="https://king-klub-app.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.token = None
