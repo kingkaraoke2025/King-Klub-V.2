@@ -58,9 +58,9 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-royal-bg flex">
-      {/* Left Side - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
+    <div className="min-h-screen bg-royal-bg flex items-center justify-center">
+      {/* Centered Form */}
+      <div className="w-full max-w-md flex items-center justify-center p-8">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -249,26 +249,6 @@ const RegisterPage = () => {
             </Link>
           </p>
         </motion.div>
-      </div>
-
-      {/* Right Side - Image */}
-      <div className="hidden lg:block lg:w-1/2 relative">
-        <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ 
-            backgroundImage: 'url(https://images.unsplash.com/photo-1766650577116-ab54eedec12a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzh8MHwxfHNlYXJjaHwyfHxoYXBweSUyMGZyaWVuZHMlMjBzaW5naW5nJTIwa2FyYW9rZSUyMHBhcnR5fGVufDB8fHx8MTc3MjkyNjI1OXww&ixlib=rb-4.1.0&q=85)',
-            filter: 'brightness(0.4)'
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-l from-royal-bg via-royal-bg/50 to-transparent" />
-        <div className="absolute bottom-12 left-12 right-12">
-          <h2 className="font-cinzel font-bold text-4xl text-white mb-4">
-            Your <span className="text-gold">Kingdom</span> Awaits
-          </h2>
-          <p className="text-white/70 font-playfair italic text-lg">
-            Join thousands of performers climbing the ranks at King Karaoke.
-          </p>
-        </div>
       </div>
     </div>
   );

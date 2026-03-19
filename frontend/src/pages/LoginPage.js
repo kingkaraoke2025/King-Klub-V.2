@@ -35,29 +35,9 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-royal-bg flex">
-      {/* Left Side - Image */}
-      <div className="hidden lg:block lg:w-1/2 relative">
-        <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ 
-            backgroundImage: 'url(https://images.unsplash.com/photo-1703353312021-a1965f5a7ddd?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwxfHxrYXJhb2tlJTIwbWljcm9waG9uZSUyMHN0YWdlJTIwbGlnaHRzJTIwZGFyayUyMGF0bW9zcGhlcmV8ZW58MHx8fHwxNzcyOTI2MjU3fDA&ixlib=rb-4.1.0&q=85)',
-            filter: 'brightness(0.4)'
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-royal-bg via-royal-bg/50 to-transparent" />
-        <div className="absolute bottom-12 left-12 right-12">
-          <h2 className="font-cinzel font-bold text-4xl text-white mb-4">
-            The Stage <span className="text-gold">Awaits</span>
-          </h2>
-          <p className="text-white/70 font-playfair italic text-lg">
-            Every voice deserves to be heard. Claim your spotlight.
-          </p>
-        </div>
-      </div>
-
-      {/* Right Side - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
+    <div className="min-h-screen bg-royal-bg flex items-center justify-center">
+      {/* Centered Form */}
+      <div className="w-full max-w-md flex items-center justify-center p-8">
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -135,7 +115,7 @@ const LoginPage = () => {
             </button>
           </form>
 
-          {/* Register Link */}
+          {/* Login Link */}
           <p className="mt-8 text-center text-white/60">
             New to the Kingdom?{' '}
             <Link 
