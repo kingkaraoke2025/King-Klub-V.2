@@ -168,8 +168,29 @@ const QueuePage = () => {
           </motion.div>
         )}
 
-        {/* Checked-in Status with Songs Remaining */}
-        {queueStatus?.checked_in && (
+        {/* Admin Status Banner */}
+        {queueStatus?.checked_in && queueStatus?.is_admin && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-card p-4 border-gold/30 bg-gold/5"
+          >
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-gold/20 rounded-lg">
+                <Crown className="w-5 h-5 text-gold" />
+              </div>
+              <div>
+                <p className="text-gold font-medium">Admin Access</p>
+                <p className="text-white/60 text-sm">
+                  Unlimited song additions - no check-in required
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Checked-in Status with Songs Remaining (non-admin) */}
+        {queueStatus?.checked_in && !queueStatus?.is_admin && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
