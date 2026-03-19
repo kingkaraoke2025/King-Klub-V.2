@@ -212,12 +212,18 @@ const AdminPage = () => {
       fetchData();
     };
     
+    const handleBattleUpdate = () => {
+      fetchData();
+    };
+    
     window.addEventListener('queueUpdated', handleQueueUpdate);
     window.addEventListener('pointsUpdated', handlePointsUpdate);
+    window.addEventListener('battleUpdated', handleBattleUpdate);
     
     return () => {
       window.removeEventListener('queueUpdated', handleQueueUpdate);
       window.removeEventListener('pointsUpdated', handlePointsUpdate);
+      window.removeEventListener('battleUpdated', handleBattleUpdate);
     };
   }, []);
 

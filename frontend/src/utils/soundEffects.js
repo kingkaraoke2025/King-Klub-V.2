@@ -170,6 +170,95 @@ class SoundEffects {
     oscillator.start(ctx.currentTime);
     oscillator.stop(ctx.currentTime + 0.3);
   }
+
+  // Play challenge received sound - dramatic alert
+  playChallengeReceived() {
+    if (!this.enabled) return;
+    const ctx = this.init();
+    
+    // Dramatic "sword clash" sound
+    const notes = [
+      { freq: 220, start: 0, duration: 0.1, type: 'sawtooth' },
+      { freq: 440, start: 0.05, duration: 0.15, type: 'square' },
+      { freq: 880, start: 0.15, duration: 0.2, type: 'triangle' },
+      { freq: 660, start: 0.3, duration: 0.3, type: 'sine' },
+    ];
+
+    notes.forEach(note => {
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      oscillator.type = note.type;
+      oscillator.frequency.value = note.freq;
+      
+      const startTime = ctx.currentTime + note.start;
+      gainNode.gain.setValueAtTime(0.25, startTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + note.duration);
+      
+      oscillator.start(startTime);
+      oscillator.stop(startTime + note.duration);
+    });
+  }
+
+  // Play challenge accepted sound - triumphant confirmation
+  playChallengeAccepted() {
+    if (!this.enabled) return;
+    const ctx = this.init();
+    
+    // Rising triumphant sound
+    const notes = [
+      { freq: 392, start: 0, duration: 0.15 },      // G4
+      { freq: 523.25, start: 0.12, duration: 0.15 }, // C5
+      { freq: 659.25, start: 0.24, duration: 0.15 }, // E5
+      { freq: 783.99, start: 0.36, duration: 0.35 }, // G5 (hold)
+    ];
+
+    notes.forEach(note => {
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      oscillator.type = 'triangle';
+      oscillator.frequency.value = note.freq;
+      
+      const startTime = ctx.currentTime + note.start;
+      gainNode.gain.setValueAtTime(0.3, startTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + note.duration);
+      
+      oscillator.start(startTime);
+      oscillator.stop(startTime + note.duration);
+    });
+  }
+
+  // Play admin notification sound - attention grabber
+  playAdminAlert() {
+    if (!this.enabled) return;
+    const ctx = this.init();
+    
+    // Double beep alert
+    [0, 0.2].forEach((delay) => {
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      oscillator.type = 'sine';
+      oscillator.frequency.value = 1000;
+      
+      const startTime = ctx.currentTime + delay;
+      gainNode.gain.setValueAtTime(0.25, startTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.12);
+      
+      oscillator.start(startTime);
+      oscillator.stop(startTime + 0.12);
+    });
+  }
 }
 
 // Export singleton instance

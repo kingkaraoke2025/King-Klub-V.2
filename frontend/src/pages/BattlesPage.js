@@ -57,8 +57,17 @@ const BattlesPage = () => {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 10000);
-    return () => clearInterval(interval);
+    
+    // Listen for real-time battle updates via WebSocket
+    const handleBattleUpdate = () => {
+      fetchData();
+    };
+    
+    window.addEventListener('battleUpdated', handleBattleUpdate);
+    
+    return () => {
+      window.removeEventListener('battleUpdated', handleBattleUpdate);
+    };
   }, [user]);
 
   const handleIssueChallenge = async () => {

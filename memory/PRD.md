@@ -45,6 +45,7 @@ A full-stack web app for King Karaoke featuring:
 | Battle Notifications | ✅ Complete | P1 |
 | Real-Time Updates | ✅ Complete | P1 |
 | Synced Battle Timer | ✅ Complete | P1 |
+| Battle Sound Effects | ✅ Complete | P1 |
 
 ## What's Been Implemented
 

@@ -1770,6 +1770,21 @@ async def accept_challenge(challenge_id: str, user: dict = Depends(get_current_u
         {"$set": {"status": "accepted"}}
     )
     
+    # Get challenger info for notification
+    challenger = await db.users.find_one({"id": challenge["challenger_id"]}, {"_id": 0, "display_name": 1})
+    
+    # Broadcast challenge accepted notification
+    await manager.broadcast({
+        "type": "CHALLENGE_ACCEPTED",
+        "challenge_id": challenge_id,
+        "challenger_id": challenge["challenger_id"],
+        "challenger_name": challenger["display_name"] if challenger else "Unknown",
+        "opponent_id": user["id"],
+        "opponent_name": user["display_name"],
+        "challenge_type": challenge["type"],
+        "challenge_type_name": CHALLENGE_TYPES.get(challenge["type"], {}).get("name", "Battle")
+    })
+    
     # Award first battle badge to opponent if needed
     user_badges = list(user.get("badges", []))
     if "first_battle" not in user_badges:

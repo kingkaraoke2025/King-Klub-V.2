@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
+import soundEffects from '@/utils/soundEffects';
 
 const useVoteNotification = (
   setVoteChallenge, 
@@ -7,7 +8,8 @@ const useVoteNotification = (
   isAdmin = false, 
   userId = null,
   onQueueUpdate = null,
-  onPointsUpdate = null
+  onPointsUpdate = null,
+  onBattleUpdate = null
 ) => {
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
@@ -39,14 +41,18 @@ const useVoteNotification = (
             case 'OPEN_VOTING':
               console.log('Voting opened:', data.challenge);
               setVoteChallenge(data.challenge);
+              // Sound effect for voting open
+              soundEffects.playBattleStart();
               // Notification for voting open
               toast.info(
                 `🗳️ Voting is NOW OPEN!`,
                 {
-                  description: `${data.challenge?.challenger_name || 'Challenger'} vs ${data.challenge?.opponent_name || 'Opponent'}`,
+                  description: `${data.challenge?.challengerName || 'Challenger'} vs ${data.challenge?.opponentName || 'Opponent'}`,
                   duration: 8000,
                 }
               );
+              // Dispatch event for battles page refresh
+              window.dispatchEvent(new CustomEvent('battleUpdated', { detail: data }));
               break;
               
             case 'CLOSE_VOTING':
@@ -55,6 +61,8 @@ const useVoteNotification = (
                 onVotingClosed(data.challengeId);
               }
               setVoteChallenge(null);
+              // Dispatch event for battles page refresh
+              window.dispatchEvent(new CustomEvent('battleUpdated', { detail: data }));
               break;
             
             case 'QUEUE_UPDATED':
@@ -80,7 +88,8 @@ const useVoteNotification = (
             case 'BATTLE_CHALLENGE':
               // Someone was challenged to a battle
               if (data.opponent_id === userId) {
-                // You've been challenged!
+                // You've been challenged! - play sound
+                soundEffects.playChallengeReceived();
                 toast.warning(
                   `⚔️ You've been challenged!`,
                   {
@@ -98,6 +107,37 @@ const useVoteNotification = (
                   }
                 );
               }
+              // Dispatch event for battles page refresh
+              window.dispatchEvent(new CustomEvent('battleUpdated', { detail: data }));
+              if (onBattleUpdate) onBattleUpdate(data);
+              break;
+              
+            case 'CHALLENGE_ACCEPTED':
+              // Challenge was accepted
+              if (data.challenger_id === userId) {
+                // Your challenge was accepted! - play sound
+                soundEffects.playChallengeAccepted();
+                toast.success(
+                  `✅ Challenge Accepted!`,
+                  {
+                    description: `${data.opponent_name} accepted your ${data.challenge_type_name} challenge!`,
+                    duration: 8000,
+                  }
+                );
+              } else if (isAdmin) {
+                // Admin notification - play sound
+                soundEffects.playAdminAlert();
+                toast.info(
+                  `⚔️ Challenge Accepted`,
+                  {
+                    description: `${data.opponent_name} accepted ${data.challenger_name}'s ${data.challenge_type_name}!`,
+                    duration: 6000,
+                  }
+                );
+              }
+              // Dispatch event for battles page refresh
+              window.dispatchEvent(new CustomEvent('battleUpdated', { detail: data }));
+              if (onBattleUpdate) onBattleUpdate(data);
               break;
               
             case 'BATTLE_ENDED':
@@ -107,6 +147,7 @@ const useVoteNotification = (
               
               if (isParticipant) {
                 if (isWinner) {
+                  soundEffects.playVictory();
                   toast.success(
                     `🏆 Victory! You won!`,
                     {
@@ -145,6 +186,9 @@ const useVoteNotification = (
                   }
                 );
               }
+              // Dispatch event for battles page refresh
+              window.dispatchEvent(new CustomEvent('battleUpdated', { detail: data }));
+              if (onBattleUpdate) onBattleUpdate(data);
               break;
               
             case 'PERK_USED':
@@ -183,7 +227,7 @@ const useVoteNotification = (
       // Retry connection after 5 seconds
       reconnectTimeoutRef.current = setTimeout(connect, 5000);
     }
-  }, [setVoteChallenge, onVotingClosed, isAdmin, userId, onQueueUpdate, onPointsUpdate]);
+  }, [setVoteChallenge, onVotingClosed, isAdmin, userId, onQueueUpdate, onPointsUpdate, onBattleUpdate]);
 
   useEffect(() => {
     connect();
