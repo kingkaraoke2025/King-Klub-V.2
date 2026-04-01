@@ -108,6 +108,23 @@ const useVoteNotification = (
               // Dispatch custom event for components not using the hook directly
               window.dispatchEvent(new CustomEvent('pointsUpdated', { detail: data }));
               break;
+            
+            case 'LEADERBOARD_RESET':
+              console.log('Nightly leaderboard reset for date:', data.date);
+              // Dispatch custom event for leaderboard page to refresh
+              window.dispatchEvent(new CustomEvent('leaderboardReset', { detail: data }));
+              // Also trigger points update to refresh any points displays
+              window.dispatchEvent(new CustomEvent('pointsUpdated', { detail: data }));
+              if (isAdmin) {
+                toast.info(
+                  'Nightly Leaderboard Reset',
+                  {
+                    description: `Tonight's leaderboard has been reset for ${data.date}`,
+                    duration: 5000,
+                  }
+                );
+              }
+              break;
               
             case 'BATTLE_CHALLENGE':
               // Someone was challenged to a battle

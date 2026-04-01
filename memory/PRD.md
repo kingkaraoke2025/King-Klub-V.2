@@ -50,11 +50,20 @@ A full-stack web app for King Karaoke featuring:
 ## What's Been Implemented
 
 ### March 2026 - Latest Updates
+- **Nightly Leaderboard Reset**: Implemented dual leaderboard system
+  - Added "Tonight" tab showing points earned during current night only
+  - Added "All-Time" tab showing total accumulated points
+  - Nightly points automatically reset when admin generates a new QR code
+  - WebSocket `LEADERBOARD_RESET` event notifies all connected clients when reset occurs
+  - All point-awarding actions now increment both `nightly_points` and `points`
+
 - **WebSocket Battle Notifications Fix**: Fixed critical bug where battle notifications weren't being received
   - Issue: React StrictMode was causing WebSocket connections to close immediately after opening
   - Fix: Added `isConnectingRef` and `shouldReconnectRef` flags in `useVoteNotification.js` to handle double-mount/unmount cycles
   - Verified: WebSocket now connects successfully and battle notifications (BATTLE_CHALLENGE, CHALLENGE_ACCEPTED, BATTLE_ENDED) are properly received
   - Test report: `/app/test_reports/iteration_4.json`
+
+- **Login/Register Page Cleanup**: Removed side images from login and registration pages, now centered form design
 
 ### December 2025 - Previous Updates
 - **Admin Queue Reordering**: Admins can now manually move songs up/down in the queue
