@@ -115,6 +115,19 @@ const useVoteNotification = (
               window.dispatchEvent(new CustomEvent('leaderboardReset', { detail: data }));
               // Also trigger points update to refresh any points displays
               window.dispatchEvent(new CustomEvent('pointsUpdated', { detail: data }));
+              
+              // Show champion notification if someone won
+              if (data.champion) {
+                soundEffects.play('challenge');
+                toast.success(
+                  `Nightly Champion: ${data.champion.display_name}!`,
+                  {
+                    description: `Earned ${data.champion.nightly_points} points tonight and wins the Nightly Champion badge!`,
+                    duration: 8000,
+                  }
+                );
+              }
+              
               if (isAdmin) {
                 toast.info(
                   'Nightly Leaderboard Reset',

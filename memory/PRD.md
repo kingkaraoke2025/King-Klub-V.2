@@ -50,6 +50,11 @@ A full-stack web app for King Karaoke featuring:
 ## What's Been Implemented
 
 ### March 2026 - Latest Updates
+- **Nightly Champion Badge**: Added new badge awarded to #1 performer on tonight's leaderboard
+  - Worth 25 bonus points
+  - Automatically awarded when admin generates new QR code (new night begins)
+  - Recorded in accomplishments with night_date and final nightly_points
+
 - **Nightly Leaderboard Reset**: Implemented dual leaderboard system
   - Added "Tonight" tab showing points earned during current night only
   - Added "All-Time" tab showing total accumulated points

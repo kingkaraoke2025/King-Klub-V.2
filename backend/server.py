@@ -223,6 +223,9 @@ BADGES = {
     "battle_winner": {"name": "Battle Victor", "description": "Won your first battle", "icon": "trophy", "points_reward": 50, "category": "battle"},
     "duel_master": {"name": "Duel Master", "description": "Won 5 battles", "icon": "crown", "points_reward": 100, "category": "battle"},
     "crowd_champion": {"name": "Crowd Champion", "description": "Won a battle with 10+ votes", "icon": "users", "points_reward": 75, "category": "battle"},
+    
+    # Nightly champion
+    "nightly_champion": {"name": "Nightly Champion", "description": "Finished #1 on tonight's leaderboard", "icon": "moon-star", "points_reward": 25, "category": "performance"},
 }
 
 # Challenge types
@@ -2315,6 +2318,48 @@ async def get_venue_qr_data(admin: dict = Depends(get_admin_user)):
     nightly_reset = False
     
     if last_night != today:
+        # Before resetting, award "Nightly Champion" badge to #1 on tonight's leaderboard
+        nightly_champion = await db.users.find_one(
+            {"nightly_points": {"$gt": 0}},
+            {"_id": 0, "id": 1, "display_name": 1, "badges": 1, "nightly_points": 1},
+            sort=[("nightly_points", -1)]
+        )
+        
+        champion_awarded = None
+        if nightly_champion and nightly_champion.get("nightly_points", 0) > 0:
+            champion_id = nightly_champion["id"]
+            champion_badges = list(nightly_champion.get("badges", []))
+            
+            # Award the badge (can earn multiple times, but only once per night)
+            if "nightly_champion" not in champion_badges:
+                champion_badges.append("nightly_champion")
+            
+            # Add badge points to their total (not nightly since we're resetting)
+            await db.users.update_one(
+                {"id": champion_id},
+                {
+                    "$set": {"badges": champion_badges},
+                    "$inc": {"points": BADGES["nightly_champion"]["points_reward"]}
+                }
+            )
+            
+            # Record the accomplishment
+            await db.accomplishments.insert_one({
+                "id": str(uuid.uuid4()),
+                "user_id": champion_id,
+                "badge_id": "nightly_champion",
+                "badge_name": BADGES["nightly_champion"]["name"],
+                "earned_at": datetime.now(timezone.utc).isoformat(),
+                "night_date": last_night,
+                "nightly_points": nightly_champion.get("nightly_points", 0)
+            })
+            
+            champion_awarded = {
+                "user_id": champion_id,
+                "display_name": nightly_champion["display_name"],
+                "nightly_points": nightly_champion.get("nightly_points", 0)
+            }
+        
         # New night! Reset all users' nightly_points to 0
         await db.users.update_many({}, {"$set": {"nightly_points": 0}})
         # Store the new night date
@@ -2325,7 +2370,11 @@ async def get_venue_qr_data(admin: dict = Depends(get_admin_user)):
         )
         nightly_reset = True
         # Broadcast leaderboard update to all clients
-        await manager.broadcast({"type": "LEADERBOARD_RESET", "date": today})
+        await manager.broadcast({
+            "type": "LEADERBOARD_RESET", 
+            "date": today,
+            "champion": champion_awarded
+        })
     
     # Calculate when this code expires (4 AM next day in venue timezone)
     tz = ZoneInfo(VENUE_TIMEZONE)
