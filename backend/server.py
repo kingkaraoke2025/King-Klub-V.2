@@ -23,7 +23,7 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # JWT Configuration
-JWT_SECRET = os.environ.get('JWT_SECRET', 'king-klub-secret-key-2024')
+JWT_SECRET = os.environ['JWT_SECRET']
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
@@ -2282,7 +2282,7 @@ async def close_voting(challenge_id: str, admin: dict = Depends(get_admin_user))
 import hashlib
 from zoneinfo import ZoneInfo
 
-VENUE_SECRET = os.environ.get('VENUE_SECRET', 'king-karaoke-2024')
+VENUE_SECRET = os.environ['VENUE_SECRET']
 VENUE_TIMEZONE = os.environ.get('VENUE_TIMEZONE', 'America/Chicago')  # Central Time for King Karaoke
 CHECKIN_POINTS = 10
 QR_CODE_CUTOFF_HOUR = 4  # QR code expires at 4 AM the next day
