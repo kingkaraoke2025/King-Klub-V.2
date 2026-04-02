@@ -1683,12 +1683,22 @@ async def get_active_challenges(user: dict = Depends(get_current_user)):
         {"_id": 0}
     ).sort("created_at", -1).to_list(50)
     
-    # Add user names
+    # Collect all user IDs and fetch in one query (avoid N+1)
+    user_ids = set()
     for c in challenges:
-        challenger = await db.users.find_one({"id": c["challenger_id"]}, {"_id": 0, "display_name": 1, "rank": 1, "points": 1})
-        opponent = await db.users.find_one({"id": c["opponent_id"]}, {"_id": 0, "display_name": 1, "rank": 1, "points": 1})
-        c["challenger"] = challenger
-        c["opponent"] = opponent
+        user_ids.add(c["challenger_id"])
+        user_ids.add(c["opponent_id"])
+    
+    users = await db.users.find(
+        {"id": {"$in": list(user_ids)}},
+        {"_id": 0, "id": 1, "display_name": 1, "rank": 1, "points": 1}
+    ).to_list(100)
+    user_map = {u["id"]: u for u in users}
+    
+    # Add user data to challenges
+    for c in challenges:
+        c["challenger"] = user_map.get(c["challenger_id"])
+        c["opponent"] = user_map.get(c["opponent_id"])
         c["vote_count"] = len(c.get("votes", []))
         c["type_info"] = CHALLENGE_TYPES.get(c["type"], {})
     
@@ -1702,11 +1712,21 @@ async def get_my_challenges(user: dict = Depends(get_current_user)):
         {"_id": 0}
     ).sort("created_at", -1).to_list(50)
     
+    # Collect all user IDs and fetch in one query (avoid N+1)
+    user_ids = set()
     for c in challenges:
-        challenger = await db.users.find_one({"id": c["challenger_id"]}, {"_id": 0, "display_name": 1})
-        opponent = await db.users.find_one({"id": c["opponent_id"]}, {"_id": 0, "display_name": 1})
-        c["challenger"] = challenger
-        c["opponent"] = opponent
+        user_ids.add(c["challenger_id"])
+        user_ids.add(c["opponent_id"])
+    
+    users = await db.users.find(
+        {"id": {"$in": list(user_ids)}},
+        {"_id": 0, "id": 1, "display_name": 1}
+    ).to_list(100)
+    user_map = {u["id"]: u for u in users}
+    
+    for c in challenges:
+        c["challenger"] = user_map.get(c["challenger_id"])
+        c["opponent"] = user_map.get(c["opponent_id"])
         c["type_info"] = CHALLENGE_TYPES.get(c["type"], {})
     
     return challenges
@@ -2536,9 +2556,16 @@ async def get_today_checkins(admin: dict = Depends(get_admin_user)):
         {"_id": 0}
     ).to_list(500)
     
+    # Collect all user IDs and fetch in one query (avoid N+1)
+    user_ids = list(set([c["user_id"] for c in checkins]))
+    users = await db.users.find(
+        {"id": {"$in": user_ids}},
+        {"_id": 0, "id": 1, "display_name": 1}
+    ).to_list(500)
+    user_map = {u["id"]: u["display_name"] for u in users}
+    
     for checkin in checkins:
-        u = await db.users.find_one({"id": checkin["user_id"]}, {"_id": 0, "display_name": 1})
-        checkin["user_name"] = u["display_name"] if u else "Unknown"
+        checkin["user_name"] = user_map.get(checkin["user_id"], "Unknown")
     
     return {
         "date": today,
