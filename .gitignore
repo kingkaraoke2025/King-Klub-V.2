@@ -80,3 +80,8 @@ test_reports/
 *.env
 *.env.*
 frontend/node_modules/.cache/default-development/8.pack
+-e 
+# Environment files
+*.env
+*.env.*
+frontend/node_modules/.cache/default-development/10.pack
