@@ -303,10 +303,11 @@ async def check_referral_badges(referrer_id: str):
         bonus_points += BADGES["kk_ambassador"]["points_reward"]
     
     if badges_earned:
-        await db.users.update_one(
-            {"id": referrer_id},
-            {"$set": {"badges": badges}, "$inc": {"points": bonus_points, "nightly_points": bonus_points}}
-        )
+        active_night = await is_active_night()
+        badge_update = {"$set": {"badges": badges}, "$inc": {"points": bonus_points}}
+        if active_night:
+            badge_update["$inc"]["nightly_points"] = bonus_points
+        await db.users.update_one({"id": referrer_id}, badge_update)
         for badge_id in badges_earned:
             await db.accomplishments.insert_one({
                 "id": str(uuid.uuid4()),
@@ -1323,9 +1324,15 @@ async def get_all_users(user: dict = Depends(get_admin_user)):
 
 @api_router.post("/admin/users/{user_id}/points")
 async def adjust_points(user_id: str, points: int, user: dict = Depends(get_admin_user)):
+    # Only add to nightly_points if there's an active QR session
+    active_night = await is_active_night()
+    update_inc = {"points": points}
+    if active_night:
+        update_inc["nightly_points"] = points
+    
     result = await db.users.update_one(
         {"id": user_id},
-        {"$inc": {"points": points, "nightly_points": points}}
+        {"$inc": update_inc}
     )
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
@@ -1336,7 +1343,7 @@ async def adjust_points(user_id: str, points: int, user: dict = Depends(get_admi
         "user_id": user_id
     })
     
-    return {"message": f"Added {points} points"}
+    return {"message": f"Added {points} points" + (" (nightly)" if active_night else " (all-time only)")}
 
 @api_router.post("/admin/users/{user_id}/toggle-admin")
 async def toggle_admin(user_id: str, admin_user: dict = Depends(get_admin_user)):
@@ -1522,12 +1529,13 @@ async def check_and_award_badges(user_id: str, user_data: dict):
         new_badges.append("huge_tipper")
         bonus_points += BADGES["huge_tipper"]["points_reward"]
     
-    # Update user badges and add bonus points (including nightly_points)
+    # Update user badges and add bonus points (only nightly_points if active session)
     if new_badges:
-        await db.users.update_one(
-            {"id": user_id},
-            {"$set": {"badges": badges}, "$inc": {"points": bonus_points, "nightly_points": bonus_points}}
-        )
+        active_night = await is_active_night()
+        badge_update = {"$set": {"badges": badges}, "$inc": {"points": bonus_points}}
+        if active_night:
+            badge_update["$inc"]["nightly_points"] = bonus_points
+        await db.users.update_one({"id": user_id}, badge_update)
         
         # Record accomplishments
         for badge_id in new_badges:
@@ -1555,8 +1563,13 @@ async def award_points_action(data: AwardPointsRequest, admin: dict = Depends(ge
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Prepare update - include nightly_points
-    update_ops = {"$inc": {"points": points, "nightly_points": points}}
+    # Check if there's an active QR session for nightly points
+    active_night = await is_active_night()
+    
+    # Prepare update - only include nightly_points if active QR session
+    update_ops = {"$inc": {"points": points}}
+    if active_night:
+        update_ops["$inc"]["nightly_points"] = points
     
     # Track specific stats based on action
     if data.action_id == "sing_song":
@@ -1619,10 +1632,10 @@ async def award_points_action(data: AwardPointsRequest, admin: dict = Depends(ge
     
     # Update badges if any awarded
     if badges_awarded:
-        await db.users.update_one(
-            {"id": data.user_id},
-            {"$set": {"badges": badges}, "$inc": {"points": bonus_points, "nightly_points": bonus_points}}
-        )
+        badge_update = {"$set": {"badges": badges}, "$inc": {"points": bonus_points}}
+        if active_night:
+            badge_update["$inc"]["nightly_points"] = bonus_points
+        await db.users.update_one({"id": data.user_id}, badge_update)
         for badge_id in badges_awarded:
             await db.accomplishments.insert_one({
                 "id": str(uuid.uuid4()),
@@ -1785,10 +1798,11 @@ async def create_challenge(data: ChallengeCreate, user: dict = Depends(get_curre
     user_badges = list(user.get("badges", []))
     if "first_battle" not in user_badges:
         user_badges.append("first_battle")
-        await db.users.update_one(
-            {"id": user["id"]},
-            {"$set": {"badges": user_badges}, "$inc": {"points": BADGES["first_battle"]["points_reward"], "nightly_points": BADGES["first_battle"]["points_reward"]}}
-        )
+        active_night = await is_active_night()
+        badge_update = {"$set": {"badges": user_badges}, "$inc": {"points": BADGES["first_battle"]["points_reward"]}}
+        if active_night:
+            badge_update["$inc"]["nightly_points"] = BADGES["first_battle"]["points_reward"]
+        await db.users.update_one({"id": user["id"]}, badge_update)
         await db.accomplishments.insert_one({
             "id": str(uuid.uuid4()),
             "user_id": user["id"],
@@ -1841,10 +1855,11 @@ async def accept_challenge(challenge_id: str, user: dict = Depends(get_current_u
     user_badges = list(user.get("badges", []))
     if "first_battle" not in user_badges:
         user_badges.append("first_battle")
-        await db.users.update_one(
-            {"id": user["id"]},
-            {"$set": {"badges": user_badges}, "$inc": {"points": BADGES["first_battle"]["points_reward"], "nightly_points": BADGES["first_battle"]["points_reward"]}}
-        )
+        active_night = await is_active_night()
+        badge_update = {"$set": {"badges": user_badges}, "$inc": {"points": BADGES["first_battle"]["points_reward"]}}
+        if active_night:
+            badge_update["$inc"]["nightly_points"] = BADGES["first_battle"]["points_reward"]
+        await db.users.update_one({"id": user["id"]}, badge_update)
         await db.accomplishments.insert_one({
             "id": str(uuid.uuid4()),
             "user_id": user["id"],
@@ -1970,13 +1985,13 @@ async def finalize_challenge(challenge_id: str, admin: dict = Depends(get_admin_
         new_badges.append("crowd_champion")
         winner_bonus += BADGES["crowd_champion"]["points_reward"]
     
-    await db.users.update_one(
-        {"id": winner_id},
-        {
-            "$inc": {"points": type_info["points_winner"] + winner_bonus, "nightly_points": type_info["points_winner"] + winner_bonus},
-            "$set": {"badges": winner_badges, "battle_wins": battle_wins}
-        }
-    )
+    # Check if active QR session for nightly points
+    active_night = await is_active_night()
+    winner_total = type_info["points_winner"] + winner_bonus
+    winner_update = {"$inc": {"points": winner_total}, "$set": {"badges": winner_badges, "battle_wins": battle_wins}}
+    if active_night:
+        winner_update["$inc"]["nightly_points"] = winner_total
+    await db.users.update_one({"id": winner_id}, winner_update)
     
     # Record badges
     for badge_id in new_badges:
@@ -1989,10 +2004,10 @@ async def finalize_challenge(challenge_id: str, admin: dict = Depends(get_admin_
         })
     
     # Award participation points to loser
-    await db.users.update_one(
-        {"id": loser_id},
-        {"$inc": {"points": type_info["points_participant"], "nightly_points": type_info["points_participant"]}}
-    )
+    loser_update = {"$inc": {"points": type_info["points_participant"]}}
+    if active_night:
+        loser_update["$inc"]["nightly_points"] = type_info["points_participant"]
+    await db.users.update_one({"id": loser_id}, loser_update)
     
     winner_user = await db.users.find_one({"id": winner_id}, {"_id": 0, "display_name": 1})
     loser_user = await db.users.find_one({"id": loser_id}, {"_id": 0, "display_name": 1})
@@ -2084,13 +2099,13 @@ async def admin_decide_winner(challenge_id: str, winner_id: str = None, admin: d
         new_badges.append("duel_master")
         winner_bonus += BADGES["duel_master"]["points_reward"]
     
-    await db.users.update_one(
-        {"id": winner_id},
-        {
-            "$inc": {"points": type_info["points_winner"] + winner_bonus, "nightly_points": type_info["points_winner"] + winner_bonus},
-            "$set": {"badges": winner_badges, "battle_wins": battle_wins}
-        }
-    )
+    # Check if active QR session for nightly points
+    active_night = await is_active_night()
+    winner_total = type_info["points_winner"] + winner_bonus
+    winner_update = {"$inc": {"points": winner_total}, "$set": {"badges": winner_badges, "battle_wins": battle_wins}}
+    if active_night:
+        winner_update["$inc"]["nightly_points"] = winner_total
+    await db.users.update_one({"id": winner_id}, winner_update)
     
     # Record badges
     for badge_id in new_badges:
@@ -2103,10 +2118,10 @@ async def admin_decide_winner(challenge_id: str, winner_id: str = None, admin: d
         })
     
     # Award participation points to loser
-    await db.users.update_one(
-        {"id": loser_id},
-        {"$inc": {"points": type_info["points_participant"], "nightly_points": type_info["points_participant"]}}
-    )
+    loser_update = {"$inc": {"points": type_info["points_participant"]}}
+    if active_night:
+        loser_update["$inc"]["nightly_points"] = type_info["points_participant"]
+    await db.users.update_one({"id": loser_id}, loser_update)
     
     winner_user = await db.users.find_one({"id": winner_id}, {"_id": 0, "display_name": 1})
     loser_user = await db.users.find_one({"id": loser_id}, {"_id": 0, "display_name": 1})
@@ -2306,6 +2321,16 @@ VENUE_SECRET = os.environ['VENUE_SECRET']
 VENUE_TIMEZONE = os.environ.get('VENUE_TIMEZONE', 'America/Chicago')  # Central Time for King Karaoke
 CHECKIN_POINTS = 10
 QR_CODE_CUTOFF_HOUR = 4  # QR code expires at 4 AM the next day
+
+async def is_active_night():
+    """Check if there's an active QR code session for tonight.
+    Returns True only if the current venue date matches the stored current_night.
+    This ensures nightly points are only awarded during active QR sessions."""
+    today = get_venue_date()
+    settings = await db.settings.find_one({"key": "current_night"})
+    if not settings:
+        return False
+    return settings.get("value") == today
 
 def get_venue_date():
     """Get current date in venue's local timezone, accounting for 4 AM cutoff.
