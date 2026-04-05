@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Shield, Users, Mic2, CheckCircle, XCircle, Play, 
@@ -177,7 +177,7 @@ const AdminPage = () => {
     })
   );
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [queueRes, usersRes, statsRes, actionsRes, battlesRes] = await Promise.all([
         axios.get(`${API}/queue`),
@@ -192,13 +192,13 @@ const AdminPage = () => {
       setPointActions(actionsRes.data);
       setActiveBattles(battlesRes.data.filter(b => b.status === 'accepted'));
     } catch (error) {
-      console.error('Failed to fetch admin data:', error);
+      console.error('Failed to fetch admin data:', error.message);
       toast.error('Failed to load admin data');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -225,7 +225,7 @@ const AdminPage = () => {
       window.removeEventListener('pointsUpdated', handlePointsUpdate);
       window.removeEventListener('battleUpdated', handleBattleUpdate);
     };
-  }, []);
+  }, [fetchData]);
 
   const handleRefresh = () => {
     setRefreshing(true);

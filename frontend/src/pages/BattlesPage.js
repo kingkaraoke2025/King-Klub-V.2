@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Swords, Crown, Users, Trophy, Search, X, Check, 
@@ -36,7 +36,7 @@ const BattlesPage = () => {
   const [userSearch, setUserSearch] = useState('');
   const [creating, setCreating] = useState(false);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [challengesRes, myRes, typesRes, leaderboardRes] = await Promise.all([
         axios.get(`${API}/challenges`),
@@ -49,11 +49,11 @@ const BattlesPage = () => {
       setChallengeTypes(typesRes.data);
       setUsers(leaderboardRes.data.filter(u => u.id !== user?.id));
     } catch (error) {
-      console.error('Failed to fetch data:', error);
+      console.error('Failed to fetch data:', error.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
 
   useEffect(() => {
     fetchData();
@@ -68,7 +68,7 @@ const BattlesPage = () => {
     return () => {
       window.removeEventListener('battleUpdated', handleBattleUpdate);
     };
-  }, [user]);
+  }, [fetchData]);
 
   const handleIssueChallenge = async () => {
     if (!selectedOpponent || !selectedType) {

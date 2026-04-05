@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -33,7 +33,7 @@ const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [statsRes, accompRes, referralRes] = await Promise.all([
         axios.get(`${API}/stats`),
@@ -44,19 +44,19 @@ const DashboardPage = () => {
       setRecentAccomplishments(accompRes.data.slice(0, 3));
       setReferralStats(referralRes.data);
     } catch (error) {
-      console.error('Failed to fetch dashboard data:', error);
+      console.error('Failed to fetch dashboard data:', error.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
     refreshUser();
     
     // Listen for real-time points updates via WebSocket
-    const handlePointsUpdate = (event) => {
-      // Refresh dashboard when points change (especially if it's the current user)
+    const handlePointsUpdate = () => {
+      // Refresh dashboard when points change
       fetchData();
       refreshUser();
     };
@@ -66,7 +66,7 @@ const DashboardPage = () => {
     return () => {
       window.removeEventListener('pointsUpdated', handlePointsUpdate);
     };
-  }, []);
+  }, [fetchData, refreshUser]);
 
   const progressToNextRank = user?.next_rank
     ? ((user.points - (user.rank?.min_points || 0)) / 

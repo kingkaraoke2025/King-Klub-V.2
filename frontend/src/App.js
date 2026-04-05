@@ -83,7 +83,10 @@ const AppContent = () => {
           setVoteChallenge(response.data.challenge);
         }
       } catch (error) {
-        // Silently fail
+        // Expected to fail when no voting is open - no action needed
+        if (error.response?.status !== 404) {
+          console.error('Failed to check open voting:', error.message);
+        }
       }
     };
     checkOpenVoting();

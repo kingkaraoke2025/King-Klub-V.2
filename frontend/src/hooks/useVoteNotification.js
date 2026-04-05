@@ -259,8 +259,11 @@ const useVoteNotification = (
             default:
               console.log('Unknown message type:', data.type);
           }
-        } catch (e) {
-          // Ignore non-JSON messages (like pong)
+        } catch (parseError) {
+          // Non-JSON messages (like "pong") are expected and ignored
+          if (event.data !== 'pong') {
+            console.warn('Failed to parse WebSocket message:', event.data);
+          }
         }
       };
 

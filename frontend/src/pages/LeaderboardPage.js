@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Crown, Medal, Star, TrendingUp, Moon, Calendar } from 'lucide-react';
 import { Layout } from '@/components/Layout';
@@ -35,7 +35,7 @@ const LeaderboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('tonight');
 
-  const fetchLeaderboards = async () => {
+  const fetchLeaderboards = useCallback(async () => {
     try {
       const [allTimeRes, tonightRes] = await Promise.all([
         axios.get(`${API}/leaderboard`),
@@ -45,11 +45,11 @@ const LeaderboardPage = () => {
       setTonightLeaderboard(tonightRes.data.leaderboard || []);
       setTonightDate(tonightRes.data.date || '');
     } catch (error) {
-      console.error('Failed to fetch leaderboard:', error);
+      console.error('Failed to fetch leaderboard:', error.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchLeaderboards();
@@ -71,7 +71,7 @@ const LeaderboardPage = () => {
       window.removeEventListener('pointsUpdated', handlePointsUpdate);
       window.removeEventListener('leaderboardReset', handleLeaderboardReset);
     };
-  }, []);
+  }, [fetchLeaderboards]);
 
   const currentLeaderboard = activeTab === 'tonight' ? tonightLeaderboard : allTimeLeaderboard;
   const pointsKey = activeTab === 'tonight' ? 'nightly_points' : 'points';

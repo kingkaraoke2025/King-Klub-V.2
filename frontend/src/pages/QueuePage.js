@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic2, Clock, Plus, X, Music, User, Loader2, MessageSquare, Zap, Crown, Sparkles, Timer, AlertCircle, QrCode, CheckCircle2 } from 'lucide-react';
 import { Layout } from '@/components/Layout';
@@ -25,34 +25,41 @@ const QueuePage = () => {
   const [artist, setArtist] = useState('');
   const [messageToAdmin, setMessageToAdmin] = useState('');
 
-  const fetchQueue = async () => {
+  const fetchQueue = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/queue`);
       setQueue(response.data);
     } catch (error) {
-      console.error('Failed to fetch queue:', error);
+      // Only log unexpected errors
+      if (error.response?.status !== 401) {
+        console.error('Failed to fetch queue:', error.message);
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchPerkStatus = async () => {
+  const fetchPerkStatus = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/queue/perk-status`);
       setPerkStatus(response.data);
     } catch (error) {
-      console.error('Failed to fetch perk status:', error);
+      if (error.response?.status !== 401) {
+        console.error('Failed to fetch perk status:', error.message);
+      }
     }
-  };
+  }, []);
 
-  const fetchQueueStatus = async () => {
+  const fetchQueueStatus = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/queue/my-status`);
       setQueueStatus(response.data);
     } catch (error) {
-      console.error('Failed to fetch queue status:', error);
+      if (error.response?.status !== 401) {
+        console.error('Failed to fetch queue status:', error.message);
+      }
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchQueue();
@@ -70,7 +77,7 @@ const QueuePage = () => {
     return () => {
       window.removeEventListener('queueUpdated', handleQueueUpdate);
     };
-  }, []);
+  }, [fetchQueue, fetchPerkStatus, fetchQueueStatus]);
 
   const handleAddToQueue = async (e) => {
     e.preventDefault();
