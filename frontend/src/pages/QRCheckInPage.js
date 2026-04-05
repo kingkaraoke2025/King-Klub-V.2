@@ -175,7 +175,7 @@ const QRCheckInPage = () => {
                           {new Date(checkin.timestamp).toLocaleTimeString()}
                         </p>
                       </div>
-                      <span className="text-gold text-sm">+50 pts</span>
+                      <span className="text-gold text-sm">+10 pts</span>
                     </motion.div>
                   ))}
                 </div>
@@ -209,7 +209,7 @@ const QRCheckInPage = () => {
               <div className="w-12 h-12 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-3">
                 <span className="text-gold font-bold text-xl">3</span>
               </div>
-              <p className="text-white/80">They earn +50 points instantly</p>
+              <p className="text-white/80">They earn +10 points instantly</p>
             </div>
           </div>
         </motion.div>
