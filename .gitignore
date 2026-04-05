@@ -75,3 +75,7 @@ android-sdk/
 
 # Test reports (local only)
 test_reports/
+-e 
+# Environment files
+*.env
+*.env.*
