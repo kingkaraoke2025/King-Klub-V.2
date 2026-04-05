@@ -2550,7 +2550,7 @@ async def get_today_checkin_status(user: dict = Depends(get_current_user)):
 @api_router.get("/admin/checkins/today")
 async def get_today_checkins(admin: dict = Depends(get_admin_user)):
     """Get all check-ins for today (admin only)"""
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = get_venue_date()  # Use venue date with 4AM cutoff
     checkins = await db.checkins.find(
         {"date": today},
         {"_id": 0}
