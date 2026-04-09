@@ -35,6 +35,8 @@ const LeaderboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('tonight');
 
+  const [tonightActive, setTonightActive] = useState(false);
+
   const fetchLeaderboards = useCallback(async () => {
     try {
       const [allTimeRes, tonightRes] = await Promise.all([
@@ -44,6 +46,7 @@ const LeaderboardPage = () => {
       setAllTimeLeaderboard(allTimeRes.data);
       setTonightLeaderboard(tonightRes.data.leaderboard || []);
       setTonightDate(tonightRes.data.date || '');
+      setTonightActive(tonightRes.data.active || false);
     } catch (error) {
       console.error('Failed to fetch leaderboard:', error.message);
     } finally {
@@ -299,34 +302,54 @@ const LeaderboardPage = () => {
           )}
 
           <TabsContent value="tonight" className="mt-6">
-            {/* Podium */}
-            {renderPodium(tonightLeaderboard)}
-            
-            {/* User's Position */}
-            {userPosition > 0 && activeTab === 'tonight' && (
+            {/* Show message if no active session */}
+            {!tonightActive ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="glass-card p-4 border-gold/30 mb-6"
-                data-testid="user-position"
+                className="glass-card p-12 text-center"
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gold/10 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-gold" />
-                  </div>
-                  <div>
-                    <p className="text-white/60 text-sm">Your Tonight's Position</p>
-                    <p className="text-white font-bold text-xl">
-                      #{userPosition} <span className="text-white/60 font-normal text-base">out of {tonightLeaderboard.length}</span>
-                    </p>
-                  </div>
-                </div>
+                <Moon className="w-16 h-16 text-white/20 mx-auto mb-4" />
+                <h3 className="font-cinzel font-bold text-xl text-white mb-2">No Active Session</h3>
+                <p className="text-white/60">
+                  Tonight's leaderboard will appear once the venue opens and generates a new QR code.
+                </p>
+                <p className="text-white/40 text-sm mt-2">
+                  Check in when you arrive to start earning points!
+                </p>
               </motion.div>
-            )}
+            ) : (
+              <>
+                {/* Podium */}
+                {renderPodium(tonightLeaderboard)}
+                
+                {/* User's Position */}
+                {userPosition > 0 && activeTab === 'tonight' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="glass-card p-4 border-gold/30 mb-6"
+                    data-testid="user-position"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-gold/10 rounded-lg flex items-center justify-center">
+                        <TrendingUp className="w-6 h-6 text-gold" />
+                      </div>
+                      <div>
+                        <p className="text-white/60 text-sm">Your Tonight's Position</p>
+                        <p className="text-white font-bold text-xl">
+                          #{userPosition} <span className="text-white/60 font-normal text-base">out of {tonightLeaderboard.length}</span>
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
 
-            {/* List */}
-            {renderLeaderboardList(tonightLeaderboard)}
+                {/* List */}
+                {renderLeaderboardList(tonightLeaderboard)}
+              </>
+            )}
           </TabsContent>
 
           <TabsContent value="alltime" className="mt-6">

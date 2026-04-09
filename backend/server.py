@@ -1275,9 +1275,19 @@ async def get_leaderboard():
 @api_router.get("/leaderboard/tonight")
 async def get_tonight_leaderboard():
     """Get tonight's leaderboard (points earned tonight only)"""
-    # Get current night date
+    # Check if there's an active QR session for today
+    today = get_venue_date()
     settings = await db.settings.find_one({"key": "current_night"})
-    current_night = settings.get("value") if settings else get_venue_date()
+    current_night = settings.get("value") if settings else None
+    
+    # Only show leaderboard if there's an active session for TODAY
+    # If current_night doesn't match today, return empty (session ended or not started)
+    if current_night != today:
+        return {
+            "date": today,
+            "active": False,
+            "leaderboard": []
+        }
     
     users = await db.users.find(
         {"nightly_points": {"$gt": 0}},
@@ -1298,6 +1308,7 @@ async def get_tonight_leaderboard():
     
     return {
         "date": current_night,
+        "active": True,
         "leaderboard": leaderboard
     }
 
