@@ -177,8 +177,8 @@ const CheckInPage = () => {
                 <Award className="w-5 h-5 text-purple-400" />
                 <span className="text-purple-400 font-medium">Badge Unlocked!</span>
               </div>
-              {result.badges_earned.map((badge, i) => (
-                <p key={i} className="text-white font-cinzel">{badge}</p>
+              {result.badges_earned.map((badge) => (
+                <p key={badge} className="text-white font-cinzel">{badge}</p>
               ))}
             </motion.div>
           )}

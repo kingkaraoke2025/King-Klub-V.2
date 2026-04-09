@@ -15,23 +15,43 @@ const useVoteNotification = (
   const reconnectTimeoutRef = useRef(null);
   const isConnectingRef = useRef(false);
   const shouldReconnectRef = useRef(true);
+  
+  // Use refs for callbacks to avoid stale closures
+  const callbacksRef = useRef({
+    setVoteChallenge,
+    onVotingClosed,
+    onQueueUpdate,
+    onPointsUpdate,
+    onBattleUpdate
+  });
+  
+  // Update refs when callbacks change
+  useEffect(() => {
+    callbacksRef.current = {
+      setVoteChallenge,
+      onVotingClosed,
+      onQueueUpdate,
+      onPointsUpdate,
+      onBattleUpdate
+    };
+  }, [setVoteChallenge, onVotingClosed, onQueueUpdate, onPointsUpdate, onBattleUpdate]);
 
   const connect = useCallback(() => {
     // Prevent multiple simultaneous connection attempts
     if (isConnectingRef.current) {
-      console.log('WebSocket connection already in progress, skipping');
+      // Connection already in progress
       return;
     }
     
     // Don't reconnect if we shouldn't (component unmounted)
     if (!shouldReconnectRef.current) {
-      console.log('WebSocket reconnection disabled, skipping');
+      // Reconnection disabled
       return;
     }
     
     // Close any existing connection first
     if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) {
-      console.log('Closing existing WebSocket connection');
+      // Closing existing connection
       wsRef.current.close();
     }
     
@@ -40,13 +60,13 @@ const useVoteNotification = (
     // Determine WebSocket URL - use /api/ws for proper routing through ingress
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/api/ws`;
-    console.log('Attempting WebSocket connection to:', wsUrl);
+    // Connecting to WebSocket
 
     try {
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
-        console.log('WebSocket connected successfully to:', wsUrl);
+        // WebSocket connected
         isConnectingRef.current = false;
         // Send ping every 30 seconds to keep connection alive
         const pingInterval = setInterval(() => {
@@ -60,11 +80,12 @@ const useVoteNotification = (
       wsRef.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          const { setVoteChallenge, onVotingClosed, onQueueUpdate, onPointsUpdate, onBattleUpdate } = callbacksRef.current;
 
           switch (data.type) {
             case 'OPEN_VOTING':
-              console.log('Voting opened:', data.challenge);
-              setVoteChallenge(data.challenge);
+              // Voting opened
+              if (setVoteChallenge) setVoteChallenge(data.challenge);
               // Sound effect for voting open
               soundEffects.playBattleStart();
               // Notification for voting open
@@ -80,17 +101,17 @@ const useVoteNotification = (
               break;
               
             case 'CLOSE_VOTING':
-              console.log('Voting closed:', data.challengeId);
+              // Voting closed
               if (onVotingClosed) {
                 onVotingClosed(data.challengeId);
               }
-              setVoteChallenge(null);
+              if (setVoteChallenge) setVoteChallenge(null);
               // Dispatch event for battles page refresh
               window.dispatchEvent(new CustomEvent('battleUpdated', { detail: data }));
               break;
             
             case 'QUEUE_UPDATED':
-              console.log('Queue updated:', data.action);
+              // Queue updated
               // Trigger queue refresh in any component listening
               if (onQueueUpdate) {
                 onQueueUpdate(data);
@@ -100,7 +121,7 @@ const useVoteNotification = (
               break;
               
             case 'POINTS_UPDATED':
-              console.log('Points updated for user:', data.user_id);
+              // Points updated
               // Trigger points/leaderboard refresh
               if (onPointsUpdate) {
                 onPointsUpdate(data);
@@ -110,7 +131,7 @@ const useVoteNotification = (
               break;
             
             case 'LEADERBOARD_RESET':
-              console.log('Nightly leaderboard reset for date:', data.date);
+              // Leaderboard reset
               // Dispatch custom event for leaderboard page to refresh
               window.dispatchEvent(new CustomEvent('leaderboardReset', { detail: data }));
               // Also trigger points update to refresh any points displays
@@ -257,7 +278,7 @@ const useVoteNotification = (
               break;
               
             default:
-              console.log('Unknown message type:', data.type);
+              // Unknown message type
           }
         } catch (parseError) {
           // Non-JSON messages (like "pong") are expected and ignored
@@ -292,7 +313,8 @@ const useVoteNotification = (
         reconnectTimeoutRef.current = setTimeout(connect, 5000);
       }
     }
-  }, [setVoteChallenge, onVotingClosed, isAdmin, userId, onQueueUpdate, onPointsUpdate, onBattleUpdate]);
+  // Only isAdmin and userId need to be in dependencies since callbacks use refs
+  }, [isAdmin, userId]);
 
   useEffect(() => {
     shouldReconnectRef.current = true;
